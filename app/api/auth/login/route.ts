@@ -1,4 +1,5 @@
 import { cookies } from "next/headers"
+import { randomUUID } from "crypto"
 import { prisma } from "@/lib/prisma"
 import { verifyPassword } from "@/lib/password"
 import { AUTH_COOKIE_NAME, signAuthToken } from "@/lib/auth"
@@ -51,7 +52,22 @@ export async function POST(req: Request) {
 
     return jsonOk({ ok: true })
   } catch (err) {
-    console.error("/api/auth/login error", err)
-    return jsonError("Error interno", 500)
+    const errorId = randomUUID()
+    const message = err instanceof Error ? err.message : String(err)
+    const name = err instanceof Error ? err.name : "Unknown"
+
+    console.error("/api/auth/login error", {
+      errorId,
+      name,
+      message,
+      hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
+      hasJwtSecret: Boolean(process.env.JWT_SECRET)
+    })
+
+    if (message.includes("Missing JWT_SECRET")) {
+      return jsonError("Configuración inválida del servidor (JWT_SECRET faltante)", 500)
+    }
+
+    return jsonError(`Error interno (ref: ${errorId})`, 500)
   }
 }
