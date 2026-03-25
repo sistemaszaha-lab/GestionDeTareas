@@ -5,9 +5,11 @@
 html,
 body {
   height: 100%;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 body {
-  @apply bg-bg text-fg;
+  @apply bg-bg text-fg overflow-x-hidden;
 }
 

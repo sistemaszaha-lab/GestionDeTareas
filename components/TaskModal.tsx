@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import type { TaskPriority, TaskStatus, UserRole } from "@prisma/client"
@@ -299,15 +299,15 @@ export default function TaskModal(props: {
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-xs text-slate-500">Comentarios ({task.comments.length})</div>
-              <div className="flex gap-2">
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
                 {canAdmin ? (
-                  <Button variant="danger" onClick={remove} disabled={deleting}>
+                  <Button variant="danger" onClick={remove} disabled={deleting} className="w-full sm:w-auto">
                     {deleting ? "Eliminando…" : "Eliminar"}
                   </Button>
                 ) : null}
-                <Button onClick={save} disabled={saving}>
+                <Button onClick={save} disabled={saving} className="w-full sm:w-auto">
                   {saving ? "Guardando…" : "Guardar"}
                 </Button>
               </div>

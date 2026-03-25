@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
@@ -242,12 +242,12 @@ export default function KanbanBoard({
             </ShadcnSelect>
           </div>
 
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={refresh} disabled={refreshing} className="w-full">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button variant="outline" onClick={refresh} disabled={refreshing} className="w-full sm:flex-1">
               {refreshing ? "Refrescando..." : "Refrescar"}
             </Button>
             {currentUser.role === "ADMIN" ? (
-              <Button variant="default" onClick={() => setCreateOpen(true)} className="w-full">
+              <Button variant="default" onClick={() => setCreateOpen(true)} className="w-full sm:flex-1">
                 Nueva tarea
               </Button>
             ) : null}
@@ -272,18 +272,24 @@ export default function KanbanBoard({
         </Card>
       ) : null}
 
-      <div className={["grid grid-cols-1 gap-4", filterStatus === "all" ? "md:grid-cols-3" : "md:grid-cols-1"].join(" ")}>
+      <div
+        className={[
+          "-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 touch-pan-x scroll-px-4",
+          "md:mx-0 md:grid md:snap-none md:gap-4 md:overflow-visible md:px-0 md:pb-0 md:touch-auto md:scroll-px-0",
+          filterStatus === "all" ? "md:grid-cols-3" : "md:grid-cols-1"
+        ].join(" ")}
+      >
         {visibleColumns.map((col) => {
           const colTasks = tasksByStatus(col.key)
           return (
-            <Card key={col.key} className="overflow-hidden">
-              <CardHeader className="border-b border-slate-200 p-4">
+            <Card key={col.key} className="overflow-hidden snap-start shrink-0 w-[85vw] sm:w-[22rem] md:w-auto md:shrink md:snap-none">
+              <CardHeader className="border-b border-slate-200 p-3 sm:p-4">
                 <div className="flex items-center justify-between gap-3">
                   <CardTitle className="text-base">{col.title}</CardTitle>
                   <Badge variant="secondary">{colTasks.length}</Badge>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3 p-3">
+              <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-4">
                 {isInitialLoading ? (
                   <>
                     <SkeletonTaskCard />

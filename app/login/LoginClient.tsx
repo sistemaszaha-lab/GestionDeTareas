@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useMemo, useState, type FormEvent } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -47,7 +47,7 @@ export default function LoginClient() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-white to-slate-50">
+    <main className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-white to-slate-50">
       <Card className="w-full max-w-md shadow-sm">
         <CardHeader className="space-y-2">
           <CardTitle>Bienvenido</CardTitle>

@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import type { TaskPriority, TaskStatus, UserRole } from "@prisma/client"
 import { useMemo, useState } from "react"
@@ -143,7 +143,7 @@ export default function TaskCard({
         <div className="mt-4 space-y-4">
           <div>
             <div className="text-xs font-medium text-slate-700">Estado</div>
-            <div className="mt-2 inline-flex rounded-full border border-slate-200 bg-white p-1 gap-1">
+            <div className="mt-2 flex flex-wrap rounded-full border border-slate-200 bg-white p-1 gap-1">
               {statusOrder.map((s) => {
                 const active = s === task.status
                 const label = s === "PENDING" ? "Pendiente" : s === "IN_PROGRESS" ? "En progreso" : "Hecha"
@@ -157,7 +157,7 @@ export default function TaskCard({
                     disabled={!canMove || saving}
                     aria-pressed={active}
                     className={[
-                      "h-7 rounded-full px-3 text-[11px] font-semibold",
+                      "h-9 rounded-full px-3 text-xs font-semibold md:h-7 md:text-[11px]",
                       active ? "" : "text-slate-700"
                     ].join(" ")}
                     title={canMove ? `Cambiar a ${label}` : "No puedes cambiar el estado"}
@@ -203,6 +203,7 @@ export default function TaskCard({
               <div className="flex gap-2 items-end">
                 <Input
                   id={`comment-${task.id}`}
+                  className="min-w-0 flex-1"
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   onKeyDown={(e) => {

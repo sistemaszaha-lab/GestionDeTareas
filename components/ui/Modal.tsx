@@ -33,7 +33,7 @@ export default function Modal({ open, title, onClose, children, className }: Pro
               {title ? <h2 className="text-base font-semibold truncate">{title}</h2> : null}
             </div>
             <button
-              className="text-sm text-fg-muted hover:text-fg rounded-md px-2 py-1"
+              className="h-10 shrink-0 rounded-md px-3 text-sm text-fg-muted hover:text-fg"
               type="button"
               onClick={onClose}
             >
