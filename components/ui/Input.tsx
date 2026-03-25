@@ -1,26 +1,24 @@
 "use client"
 
-import type { InputHTMLAttributes } from "react"
-import { cn } from "@/lib/ui"
+import * as React from "react"
+import { Input as ShadcnInput } from "@/components/shadcn/ui/input"
+import { Label as ShadcnLabel } from "@/components/shadcn/ui/label"
 
-type Props = InputHTMLAttributes<HTMLInputElement> & {
+type Props = React.InputHTMLAttributes<HTMLInputElement> & {
   label?: string
 }
 
 export default function Input({ className, label, id, ...props }: Props) {
   const inputId = id ?? props.name ?? undefined
   return (
-    <label className="block">
-      {label ? <span className="text-sm font-medium">{label}</span> : null}
-      <input
+    <div className="space-y-1.5">
+      {label ? <ShadcnLabel htmlFor={inputId}>{label}</ShadcnLabel> : null}
+      <ShadcnInput
         id={inputId}
-        className={cn(
-          "mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30",
-          className
-        )}
+        className={className}
         {...props}
       />
-    </label>
+    </div>
   )
 }
 

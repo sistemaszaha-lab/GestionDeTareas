@@ -1,8 +1,8 @@
-﻿import * as React from "react"
+import * as React from "react"
 import { cn } from "@/lib/ui"
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "secondary" | "outline" | "ghost"
+  variant?: "default" | "secondary" | "outline" | "ghost" | "primary" | "danger"
   size?: "default" | "sm" | "lg"
 }
 
@@ -13,6 +13,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variants: Record<NonNullable<ButtonProps["variant"]>, string> = {
       default: "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.99]",
+      primary: "bg-primary text-white hover:opacity-90 active:scale-[0.99]",
+      danger: "bg-danger text-white hover:opacity-90 active:scale-[0.99]",
       secondary: "bg-slate-100 text-slate-900 hover:bg-slate-200 active:scale-[0.99]",
       outline:
         "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:shadow-sm active:scale-[0.99]",
