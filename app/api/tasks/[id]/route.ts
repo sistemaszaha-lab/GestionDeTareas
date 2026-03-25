@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma"
+﻿import { prisma } from "@/lib/prisma"
 import { jsonError, jsonOk } from "@/lib/http"
 import { requireSession } from "@/lib/server-auth"
 import { updateTaskSchema } from "@/lib/validators"
@@ -23,12 +23,12 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (!canEditAll && !isAssignee) return jsonError("Forbidden", 403)
 
   const attemptedAssigneeChange = parsed.data.assignedToId && parsed.data.assignedToId !== existing.assignedToId
+  const attemptedPriorityChange = parsed.data.priority && parsed.data.priority !== (existing as any).priority
   const attemptedTextChange =
     (typeof parsed.data.title === "string" && parsed.data.title !== existing.title) ||
     (typeof parsed.data.description !== "undefined" && parsed.data.description !== existing.description)
-
-  if (!canEditAll && (attemptedAssigneeChange || attemptedTextChange)) {
-    return jsonError("Solo admin puede editar título/descr. o reasignar", 403)
+  if (!canEditAll && (attemptedAssigneeChange || attemptedPriorityChange || attemptedTextChange)) {
+    return jsonError("Solo admin puede editar título/descr., prioridad o reasignar", 403)
   }
 
   const task = await prisma.task.update({
@@ -37,6 +37,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       ...(parsed.data.title ? { title: parsed.data.title } : {}),
       ...(typeof parsed.data.description !== "undefined" ? { description: parsed.data.description ?? null } : {}),
       ...(parsed.data.status ? { status: parsed.data.status as any } : {}),
+      ...(parsed.data.priority ? { priority: parsed.data.priority as any } : {}),
       ...(parsed.data.assignedToId ? { assignedToId: parsed.data.assignedToId } : {})
     },
     include: {
@@ -60,3 +61,5 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
   await prisma.task.delete({ where: { id } }).catch(() => null)
   return jsonOk({ ok: true })
 }
+
+

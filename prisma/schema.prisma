@@ -18,6 +18,12 @@ enum TaskStatus {
   DONE
 }
 
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -78,6 +84,7 @@ model Task {
   title        String
   description  String?
   status       TaskStatus @default(PENDING)
+  priority     TaskPriority @default(MEDIUM)
   assignedToId String
   createdAt    DateTime   @default(now())
 
@@ -85,6 +92,7 @@ model Task {
   comments   Comment[]
 
   @@index([status])
+  @@index([priority])
   @@index([assignedToId])
 }
 

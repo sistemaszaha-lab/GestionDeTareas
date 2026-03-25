@@ -1,12 +1,21 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useState } from "react"
-import type { UserRole } from "@prisma/client"
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/shadcn/ui/dialog"
+import type { TaskPriority, UserRole } from "@prisma/client"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/shadcn/ui/dialog"
 import { Button } from "@/components/shadcn/ui/button"
 import { Input } from "@/components/shadcn/ui/input"
 import { Label } from "@/components/shadcn/ui/label"
 import { Textarea } from "@/components/shadcn/ui/textarea"
+import { Select as ShadcnSelect } from "@/components/shadcn/ui/select"
 
 type UserLite = { id: string; name: string; username: string; role: UserRole }
 
@@ -23,7 +32,7 @@ export default function CreateTaskDialog({
   onOpenChange: (open: boolean) => void
   users: UserLite[]
   currentUser: CurrentUser
-  onCreate: (input: { title: string; description: string | null; assignedToId: string }) => Promise<void>
+  onCreate: (input: { title: string; description: string | null; assignedToId: string; priority: TaskPriority }) => Promise<void>
 }) {
   const canAdmin = currentUser.role === "ADMIN"
 
@@ -36,6 +45,7 @@ export default function CreateTaskDialog({
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [assignedToId, setAssignedToId] = useState<string>(defaultAssignedToId)
+  const [priority, setPriority] = useState<TaskPriority>("MEDIUM")
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -43,6 +53,7 @@ export default function CreateTaskDialog({
     setTitle("")
     setDescription("")
     setAssignedToId(defaultAssignedToId)
+    setPriority("MEDIUM")
     setSaving(false)
   }, [open, defaultAssignedToId])
 
@@ -54,7 +65,8 @@ export default function CreateTaskDialog({
       await onCreate({
         title: t,
         description: description.trim() ? description.trim() : null,
-        assignedToId: canAdmin ? assignedToId : currentUser.id
+        assignedToId: canAdmin ? assignedToId : currentUser.id,
+        priority
       })
       onOpenChange(false)
     } finally {
@@ -92,36 +104,51 @@ export default function CreateTaskDialog({
             />
           </div>
 
+          {canAdmin ? (
+            <div className="space-y-2">
+              <Label htmlFor="task-priority">Prioridad</Label>
+              <ShadcnSelect
+                id="task-priority"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as TaskPriority)}
+              >
+                <option value="LOW">Baja</option>
+                <option value="MEDIUM">Media</option>
+                <option value="HIGH">Alta</option>
+              </ShadcnSelect>
+            </div>
+          ) : null}
+
           {canAdmin && users.length ? (
             <div className="space-y-2">
               <Label htmlFor="task-assigned">Asignar a</Label>
-              <select
+              <ShadcnSelect
                 id="task-assigned"
                 value={assignedToId}
                 onChange={(e) => setAssignedToId(e.target.value)}
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/15 focus-visible:ring-offset-2 ring-offset-white"
               >
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.name}
                   </option>
                 ))}
-              </select>
+              </ShadcnSelect>
             </div>
           ) : null}
         </div>
 
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="secondary" disabled={saving}>
+            <Button variant="outline" disabled={saving}>
               Cancelar
             </Button>
           </DialogClose>
           <Button onClick={submit} disabled={saving || !title.trim()}>
-            {saving ? "Creando..." : "Crear tarea"}
+            {saving ? "Creando…" : "Crear tarea"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
+

@@ -1,9 +1,13 @@
-"use client"
+﻿"use client"
 
-import type { TaskStatus, UserRole } from "@prisma/client"
+import type { TaskPriority, TaskStatus, UserRole } from "@prisma/client"
 import { useMemo, useState } from "react"
-import Button from "@/components/ui/Button"
-import Input from "@/components/ui/Input"
+import { Button } from "@/components/shadcn/ui/button"
+import { Card, CardContent } from "@/components/shadcn/ui/card"
+import { Badge } from "@/components/shadcn/ui/badge"
+import { Input } from "@/components/shadcn/ui/input"
+import { Label } from "@/components/shadcn/ui/label"
+import { Select as ShadcnSelect } from "@/components/shadcn/ui/select"
 
 type UserLite = { id: string; name: string; username: string; role: UserRole }
 
@@ -19,6 +23,7 @@ type TaskWithRelations = {
   title: string
   description: string | null
   status: TaskStatus
+  priority: TaskPriority
   assignedToId: string
   assignedTo: UserLite
   comments: CommentWithUser[]
@@ -106,85 +111,98 @@ export default function TaskCard({
     }
   }
 
-  return (
-    <div className="rounded-lg border border-border bg-bg shadow-sm p-3">
-      <button className="w-full text-left" onClick={onOpen} type="button">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="text-sm font-semibold truncate">{task.title}</div>
-            {task.description ? <div className="mt-1 text-xs text-fg-muted line-clamp-2">{task.description}</div> : null}
-          </div>
-          <div className="text-xs text-fg-muted whitespace-nowrap">{task.comments.length} com.</div>
-        </div>
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <div className="text-xs text-fg-muted truncate">Asignado: {task.assignedTo.name}</div>
-          <span className="text-[11px] rounded-full border border-border px-2 py-0.5 text-fg-muted">{task.status}</span>
-        </div>
-      </button>
+  const statusBadgeVariant = task.status === "DONE" ? "success" : task.status === "IN_PROGRESS" ? "default" : "secondary"
+  const priorityBadgeVariant = task.priority === "HIGH" ? "danger" : task.priority === "LOW" ? "secondary" : "outline"
 
-      <div className="mt-3 flex items-end justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="text-xs font-medium text-fg-muted">Estado</div>
-          <div className="mt-2 inline-flex rounded-full border border-border bg-card p-1 gap-1">
-            {statusOrder.map((s) => {
-              const active = s === task.status
-              const label = s === "PENDING" ? "Pending" : s === "IN_PROGRESS" ? "In progress" : "Done"
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => changeStatus(s)}
-                  disabled={!canMove || saving}
-                  aria-pressed={active}
-                  className={[
-                    "px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-                    active
-                      ? "bg-primary text-white"
-                      : "bg-transparent text-fg-muted hover:bg-bg-subtle hover:text-fg",
-                    !canMove || saving ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
-                  ].join(" ")}
-                  title={canMove ? `Cambiar a ${label}` : "No puedes cambiar el estado"}
-                >
-                  {label}
-                </button>
-              )
-            })}
+  const statusLabel = task.status === "PENDING" ? "Pendiente" : task.status === "IN_PROGRESS" ? "En progreso" : "Hecha"
+  const priorityLabel = task.priority === "LOW" ? "Baja" : task.priority === "MEDIUM" ? "Media" : "Alta"
+
+  return (
+    <Card className="group shadow-none transition-[box-shadow,border-color] hover:border-slate-300 hover:shadow-sm">
+      <CardContent className="p-4">
+        <button className="w-full text-left" onClick={onOpen} type="button">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-slate-900 truncate">{task.title}</div>
+              {task.description ? (
+                <div className="mt-1 text-xs text-slate-600 line-clamp-2">{task.description}</div>
+              ) : null}
+            </div>
+            <div className="shrink-0 text-xs text-slate-500 whitespace-nowrap">{task.comments.length} com.</div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div className="text-xs text-slate-600 truncate">Asignado: {task.assignedTo.name}</div>
+            <div className="flex items-center gap-2">
+              <Badge variant={priorityBadgeVariant as any}>{priorityLabel}</Badge>
+              <Badge variant={statusBadgeVariant as any}>{statusLabel}</Badge>
+            </div>
+          </div>
+        </button>
+
+        <div className="mt-4 space-y-4">
+          <div>
+            <div className="text-xs font-medium text-slate-700">Estado</div>
+            <div className="mt-2 inline-flex rounded-full border border-slate-200 bg-white p-1 gap-1">
+              {statusOrder.map((s) => {
+                const active = s === task.status
+                const label = s === "PENDING" ? "Pendiente" : s === "IN_PROGRESS" ? "En progreso" : "Hecha"
+                return (
+                  <Button
+                    key={s}
+                    type="button"
+                    size="sm"
+                    variant={active ? "default" : "ghost"}
+                    onClick={() => changeStatus(s)}
+                    disabled={!canMove || saving}
+                    aria-pressed={active}
+                    className={[
+                      "h-7 rounded-full px-3 text-[11px] font-semibold",
+                      active ? "" : "text-slate-700"
+                    ].join(" ")}
+                    title={canMove ? `Cambiar a ${label}` : "No puedes cambiar el estado"}
+                  >
+                    {label}
+                  </Button>
+                )
+              })}
+            </div>
           </div>
 
           {canReassign ? (
-            <label className="block mt-3">
-              <span className="text-xs font-medium text-fg-muted">Asignado a</span>
-              <select
+            <div className="space-y-2">
+              <Label htmlFor={`assignee-${task.id}`}>Asignado a</Label>
+              <ShadcnSelect
+                id={`assignee-${task.id}`}
                 value={task.assignedToId}
                 onChange={(e) => changeAssignee(e.target.value)}
                 disabled={saving}
-                className="mt-2 h-[42px] w-full rounded-lg border border-border bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
               >
                 {(users ?? []).map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.name}
                   </option>
                 ))}
-              </select>
-            </label>
+              </ShadcnSelect>
+            </div>
           ) : null}
 
           {canComment ? (
-            <div className="mt-3">
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="text-xs font-medium text-fg-muted">Comentarios</div>
+                <div className="text-xs font-medium text-slate-700">Comentarios</div>
                 <button
                   type="button"
-                  className="text-xs text-fg-muted hover:text-fg underline underline-offset-4"
+                  className="text-xs text-slate-600 hover:text-slate-900 underline underline-offset-4"
                   onClick={() => setCommentsOpen((v) => !v)}
                 >
                   {commentsOpen ? "Ocultar" : "Ver"}
                 </button>
               </div>
-
-              <div className="mt-2 flex gap-2 items-end">
+              <Label htmlFor={`comment-${task.id}`} className="sr-only">Nuevo comentario</Label>
+              <div className="flex gap-2 items-end">
                 <Input
+                  id={`comment-${task.id}`}
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   onKeyDown={(e) => {
@@ -195,40 +213,38 @@ export default function TaskCard({
                   }}
                   placeholder="Escribe un comentario…"
                   disabled={commentSending}
-                  className="mt-0"
                 />
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   type="button"
-                  className="h-[42px] shrink-0"
+                  className="h-11 shrink-0"
                   onClick={submitComment}
-                  loading={commentSending}
                   disabled={!commentText.trim() || commentSending}
                 >
-                  Enviar
+                  {commentSending ? "Enviando…" : "Enviar"}
                 </Button>
               </div>
 
               {commentsOpen ? (
-                <div className="mt-3 space-y-2">
+                <div className="space-y-2">
                   {task.comments.length === 0 ? (
-                    <div className="text-xs text-fg-muted">Aún no hay comentarios.</div>
+                    <div className="text-xs text-slate-500">Aún no hay comentarios.</div>
                   ) : (
                     recentComments.map((c) => (
-                      <div key={c.id} className="rounded-lg border border-border bg-card px-3 py-2">
+                      <div key={c.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
                         <div className="flex items-center justify-between gap-2">
-                          <div className="text-xs font-semibold truncate">{c.user.name}</div>
-                          <div className="text-[11px] text-fg-muted whitespace-nowrap">
+                          <div className="text-xs font-semibold truncate text-slate-900">{c.user.name}</div>
+                          <div className="text-[11px] text-slate-500 whitespace-nowrap">
                             {new Date(c.createdAt).toLocaleString()}
                           </div>
                         </div>
-                        <div className="mt-1 text-sm whitespace-pre-wrap">{c.content}</div>
+                        <div className="mt-1 text-sm text-slate-800 whitespace-pre-wrap">{c.content}</div>
                       </div>
                     ))
                   )}
 
                   {task.comments.length > recentComments.length ? (
-                    <div className="text-[11px] text-fg-muted">Mostrando los últimos {recentComments.length}.</div>
+                    <div className="text-[11px] text-slate-500">Mostrando los últimos {recentComments.length}.</div>
                   ) : null}
                 </div>
               ) : null}
@@ -236,14 +252,19 @@ export default function TaskCard({
           ) : null}
 
           {!canMove && !canReassign && !canComment ? (
-            <div className="mt-2 text-[11px] text-fg-muted">Solo el asignado o admin puede mover.</div>
+            <div className="text-[11px] text-slate-500">Solo el asignado o admin puede mover.</div>
           ) : null}
-        </div>
 
-        <Button variant="ghost" onClick={onOpen} className="h-[42px] shrink-0" type="button">
-          Ver
-        </Button>
-      </div>
-    </div>
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={onOpen} size="sm">
+              Ver
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
+
+
+

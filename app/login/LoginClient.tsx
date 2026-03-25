@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState, type FormEvent } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -57,7 +57,7 @@ export default function LoginClient() {
         <CardContent className="space-y-5">
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">Usuario</Label>
               <Input
                 id="username"
                 type="text"
@@ -83,7 +83,7 @@ export default function LoginClient() {
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Entrando..." : "Iniciar sesión"}
+              {loading ? "Entrando…" : "Iniciar sesión"}
             </Button>
           </form>
 

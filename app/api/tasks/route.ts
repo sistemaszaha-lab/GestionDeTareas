@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma"
+﻿import { prisma } from "@/lib/prisma"
 import { jsonError, jsonOk } from "@/lib/http"
 import { requireSession } from "@/lib/server-auth"
 import { createTaskSchema } from "@/lib/validators"
@@ -12,11 +12,13 @@ export async function GET(req: Request) {
   const url = new URL(req.url)
   const assignedToId = url.searchParams.get("assignedToId") ?? undefined
   const status = url.searchParams.get("status") ?? undefined
+  const priority = url.searchParams.get("priority") ?? undefined
 
   const tasks = await prisma.task.findMany({
     where: {
       ...(assignedToId ? { assignedToId } : {}),
-      ...(status ? { status: status as any } : {})
+      ...(status ? { status: status as any } : {}),
+      ...(priority ? { priority: priority as any } : {})
     },
     include: {
       assignedTo: { select: { id: true, name: true, username: true, role: true } },
@@ -44,7 +46,8 @@ export async function POST(req: Request) {
     data: {
       title: parsed.data.title,
       description: parsed.data.description ?? null,
-      assignedToId: parsed.data.assignedToId
+      assignedToId: parsed.data.assignedToId,
+      ...(parsed.data.priority ? { priority: parsed.data.priority as any } : {})
     },
     include: {
       assignedTo: { select: { id: true, name: true, username: true, role: true } },
@@ -57,3 +60,4 @@ export async function POST(req: Request) {
 
   return jsonOk({ task }, { status: 201 })
 }
+
