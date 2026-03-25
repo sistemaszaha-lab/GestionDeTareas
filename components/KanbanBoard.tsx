@@ -40,14 +40,18 @@ const columns: Array<{ key: TaskStatus; title: string }> = [
 export default function KanbanBoard({
   currentUser,
   users,
-  initialTasks
+  initialTasks,
+  forceUserId,
+  pageTitle
 }: {
   currentUser: CurrentUser
   users: UserLite[]
   initialTasks: TaskWithRelations[]
+  forceUserId?: string
+  pageTitle?: string
 }) {
   const [tasks, setTasks] = useState<TaskWithRelations[]>(initialTasks)
-  const [filterUserId, setFilterUserId] = useState<string>("all")
+  const [filterUserId, setFilterUserId] = useState<string>(forceUserId ?? "all")
   const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -155,26 +159,28 @@ export default function KanbanBoard({
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row md:items-end gap-3">
         <div className="flex-1">
-          <h1 className="text-lg font-semibold">Dashboard</h1>
+          <h1 className="text-lg font-semibold">{pageTitle || "Dashboard"}</h1>
           <p className="text-sm text-fg-muted">
-            Pendientes{currentUser.role === "ADMIN" ? "" : " (mías)"}: <span className="font-medium text-fg">{pendingCount}</span>
+            Pendientes{currentUser.role === "ADMIN" && !forceUserId ? "" : " (mías)"}: <span className="font-medium text-fg">{pendingCount}</span>
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
-          <Select
-            label="Ver por usuario"
-            value={filterUserId}
-            onChange={(e) => setFilterUserId(e.target.value)}
-            className="min-w-56"
-          >
-            <option value="all">Todos</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </Select>
+          {!forceUserId && (
+            <Select
+              label="Ver por usuario"
+              value={filterUserId}
+              onChange={(e) => setFilterUserId(e.target.value)}
+              className="min-w-56"
+            >
+              <option value="all">Todos</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </Select>
+          )}
 
           <div className="flex gap-2">
             <Button variant="ghost" onClick={refresh} loading={refreshing}>
@@ -205,15 +211,15 @@ export default function KanbanBoard({
         ) : (
           <>
             <div className="rounded-xl border border-border bg-card p-4">
-              <div className="text-xs text-fg-muted">Total de tareas{currentUser.role === "ADMIN" ? "" : " (mías)"}</div>
+              <div className="text-xs text-fg-muted">Total de tareas{currentUser.role === "ADMIN" && !forceUserId ? "" : " (mías)"}</div>
               <div className="mt-2 text-2xl font-semibold tracking-[-0.02em]">{totalCount}</div>
             </div>
             <div className="rounded-xl border border-border bg-card p-4">
-              <div className="text-xs text-fg-muted">Tareas pendientes{currentUser.role === "ADMIN" ? "" : " (mías)"}</div>
+              <div className="text-xs text-fg-muted">Tareas pendientes{currentUser.role === "ADMIN" && !forceUserId ? "" : " (mías)"}</div>
               <div className="mt-2 text-2xl font-semibold tracking-[-0.02em]">{pendingCount}</div>
             </div>
             <div className="rounded-xl border border-border bg-card p-4">
-              <div className="text-xs text-fg-muted">Tareas completadas{currentUser.role === "ADMIN" ? "" : " (mías)"}</div>
+              <div className="text-xs text-fg-muted">Tareas completadas{currentUser.role === "ADMIN" && !forceUserId ? "" : " (mías)"}</div>
               <div className="mt-2 text-2xl font-semibold tracking-[-0.02em]">{doneCount}</div>
             </div>
           </>
