@@ -1,17 +1,17 @@
-"use client"
+﻿"use client"
 
-import { useEffect, useMemo, useState, type FormEvent } from "react"
+import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import type { TaskPriority, TaskStatus, UserRole } from "@prisma/client"
 import { Button } from "@/components/shadcn/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/shadcn/ui/card"
 import { Badge } from "@/components/shadcn/ui/badge"
 import { Label } from "@/components/shadcn/ui/label"
-import { Input } from "@/components/shadcn/ui/input"
 import { Select as ShadcnSelect } from "@/components/shadcn/ui/select"
 import TaskCard from "@/components/TaskCard"
 import TaskModal from "@/components/TaskModal"
 import CreateTaskDialog from "@/components/CreateTaskDialog"
+import { fetchJsonOrThrow } from "@/lib/fetch-json"
 
 type UserLite = { id: string; name: string; username: string; role: UserRole }
 
@@ -63,22 +63,6 @@ export default function KanbanBoard({
   const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
-
-  const defaultQuickAssigneeId = useMemo(() => {
-    if (filterUserId !== "all") return filterUserId
-    const current = users.find((u) => u.id === currentUser.id)?.id
-    return current ?? users[0]?.id ?? ""
-  }, [currentUser.id, filterUserId, users])
-
-  const [quickTitle, setQuickTitle] = useState("")
-  const [quickDueDate, setQuickDueDate] = useState("")
-  const [quickAssignedToId, setQuickAssignedToId] = useState<string>(defaultQuickAssigneeId)
-
-  useEffect(() => {
-    if (currentUser.role !== "ADMIN") return
-    setQuickAssignedToId(defaultQuickAssigneeId)
-  }, [currentUser.role, defaultQuickAssigneeId])
-
   const isInitialLoading = refreshing && tasks.length === 0
 
   const filteredTasks = useMemo(() => {
@@ -121,9 +105,11 @@ export default function KanbanBoard({
       if (filterUserId !== "all") params.set("assignedToId", filterUserId)
       if (filterStatus !== "all") params.set("status", filterStatus)
       if (filterPriority !== "all") params.set("priority", filterPriority)
-      const res = await fetch(`/api/tasks?${params.toString()}`, { cache: "no-store" })
-      const data = (await res.json()) as { tasks?: TaskWithRelations[]; error?: string }
-      if (!res.ok) throw new Error(data.error ?? "No se pudo cargar")
+      const data = await fetchJsonOrThrow<{ tasks?: TaskWithRelations[] }>(
+        `/api/tasks?${params.toString()}`,
+        { cache: "no-store" },
+        { defaultError: "No se pudo cargar", logTag: "GET /api/tasks" }
+      )
       setTasks(data.tasks ?? [])
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error")
@@ -204,13 +190,15 @@ export default function KanbanBoard({
       dueDate: string | null
     }>
   ) {
-    const res = await fetch(`/api/tasks/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch)
-    })
-    const data = (await res.json()) as { task?: TaskWithRelations; error?: string }
-    if (!res.ok) throw new Error(data.error ?? "No se pudo actualizar")
+    const data = await fetchJsonOrThrow<{ task?: TaskWithRelations }>(
+      `/api/tasks/${id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch)
+      },
+      { defaultError: "No se pudo actualizar", logTag: "PATCH /api/tasks/:id" }
+    )
     setTasks((prev) => prev.map((t) => (t.id === id ? (data.task as TaskWithRelations) : t)))
     setActiveTask((prev) => (prev?.id === id ? (data.task as TaskWithRelations) : prev))
   }
@@ -222,163 +210,60 @@ export default function KanbanBoard({
     priority: TaskPriority
     dueDate: string | null
   }) {
-    const res = await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input)
-    })
-    const data = (await res.json()) as { task?: TaskWithRelations; error?: string }
-    if (!res.ok) throw new Error(data.error ?? "No se pudo crear")
+    const data = await fetchJsonOrThrow<{ task?: TaskWithRelations }>(
+      "/api/tasks",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input)
+      },
+      { defaultError: "No se pudo crear", logTag: "POST /api/tasks" }
+    )
     setTasks((prev) => [data.task as TaskWithRelations, ...prev])
   }
 
   async function deleteTask(id: string) {
-    const res = await fetch(`/api/tasks/${id}`, { method: "DELETE" })
-    const data = (await res.json()) as { ok?: boolean; error?: string }
-    if (!res.ok) throw new Error(data.error ?? "No se pudo eliminar")
+    await fetchJsonOrThrow<{ ok?: boolean }>(`/api/tasks/${id}`, { method: "DELETE" }, { defaultError: "No se pudo eliminar", logTag: "DELETE /api/tasks/:id" })
     setTasks((prev) => prev.filter((t) => t.id !== id))
     setActiveTask((prev) => (prev?.id === id ? null : prev))
   }
 
   async function addComment(taskId: string, content: string) {
-    const res = await fetch("/api/comments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ taskId, content })
-    })
-    const data = (await res.json()) as { comment?: any; error?: string }
-    if (!res.ok) throw new Error(data.error ?? "No se pudo comentar")
+    const data = await fetchJsonOrThrow<{ comment?: any }>(
+      "/api/comments",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId, content })
+      },
+      { defaultError: "No se pudo comentar", logTag: "POST /api/comments" }
+    )
     setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, comments: [...t.comments, data.comment] } : t)))
     setActiveTask((prev) => (prev?.id === taskId ? { ...prev, comments: [...prev.comments, data.comment] } : prev))
   }
 
-  async function quickCreate(e: FormEvent) {
-    e.preventDefault()
-    if (currentUser.role !== "ADMIN") return
-
-    const t = quickTitle.trim()
-    if (!t) return
-
-    try {
-      await createTask({
-        title: t,
-        description: null,
-        assignedToId: quickAssignedToId || currentUser.id,
-        priority: "MEDIUM",
-        dueDate: quickDueDate ? quickDueDate : null
-      })
-      toast.success("Tarea creada")
-      setQuickTitle("")
-      setQuickDueDate("")
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error")
-    }
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div className="space-y-8">
+      <div className="space-y-2">
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold tracking-[-0.02em] text-slate-900 dark:text-slate-50">{pageTitle || "Dashboard"}</h1>
+          <h1 className="text-xl font-semibold tracking-[-0.02em] text-slate-900 dark:text-slate-50">{pageTitle || "Tareas"}</h1>
           <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
             <span>Resumen:</span>
             <Badge variant="secondary">Total {totalCount}</Badge>
             <Badge variant="outline">Pendientes {pendingCount}</Badge>
-            
             <Badge variant="outline">Completadas {doneCount}</Badge>
             <Badge variant={overdueCount ? "danger" : "outline"}>Vencidas {overdueCount}</Badge>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
-          {!forceUserId ? (
-            <div className="space-y-2">
-              <Label htmlFor="filter-user">Usuario</Label>
-              <ShadcnSelect id="filter-user" value={filterUserId} onChange={(e) => setFilterUserId(e.target.value)}>
-                <option value="all">Todos</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </ShadcnSelect>
-            </div>
-          ) : null}
-
-          <div className="space-y-2">
-            <Label htmlFor="filter-status">Estado</Label>
-            <ShadcnSelect
-              id="filter-status"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-            >
-              <option value="all">Todos</option>
-              <option value="PENDING">Pendiente</option>
-              <option value="IN_PROGRESS">En progreso</option>
-              <option value="DONE">Completada</option>
-            </ShadcnSelect>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="filter-priority">Prioridad</Label>
-            <ShadcnSelect
-              id="filter-priority"
-              value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value as any)}
-            >
-              <option value="all">Todas</option>
-              <option value="LOW">Baja</option>
-              <option value="MEDIUM">Media</option>
-              <option value="HIGH">Alta</option>
-            </ShadcnSelect>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button variant="outline" onClick={refresh} disabled={refreshing} className="w-full sm:flex-1">
-              {refreshing ? "Refrescando..." : "Refrescar"}
-            </Button>
-            {currentUser.role === "ADMIN" ? (
-              <Button variant="default" onClick={() => setCreateOpen(true)} className="w-full sm:flex-1">
-                Nueva tarea
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      {currentUser.role === "ADMIN" ? (
         <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40">
           <CardContent className="p-4">
-            <form
-              onSubmit={quickCreate}
-              className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] lg:grid-cols-[1fr_auto_auto_auto]"
-            >
-              <div className="space-y-1">
-                <Label htmlFor="quick-title">Crear rápida</Label>
-                <Input
-                  id="quick-title"
-                  value={quickTitle}
-                  onChange={(e) => setQuickTitle(e.target.value)}
-                  placeholder="Escribe un título y presiona Enter…"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="quick-due">Vence el</Label>
-                <Input
-                  id="quick-due"
-                  type="date"
-                  value={quickDueDate}
-                  onChange={(e) => setQuickDueDate(e.target.value)}
-                />
-              </div>
-
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
               {!forceUserId ? (
-                <div className="space-y-1">
-                  <Label htmlFor="quick-assignee">Asignar a</Label>
-                  <ShadcnSelect
-                    id="quick-assignee"
-                    value={quickAssignedToId}
-                    onChange={(e) => setQuickAssignedToId(e.target.value)}
-                  >
+                <div className="space-y-2">
+                  <Label htmlFor="filter-user">Usuario</Label>
+                  <ShadcnSelect id="filter-user" value={filterUserId} onChange={(e) => setFilterUserId(e.target.value)}>
+                    <option value="all">Todos</option>
                     {users.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.name}
@@ -388,18 +273,39 @@ export default function KanbanBoard({
                 </div>
               ) : null}
 
-              <div className="flex items-end">
-                <Button type="submit" className="w-full" disabled={!quickTitle.trim()}>
-                  Crear
-                </Button>
+              <div className="space-y-2">
+                <Label htmlFor="filter-status">Estado</Label>
+                <ShadcnSelect id="filter-status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)}>
+                  <option value="all">Todos</option>
+                  <option value="PENDING">Pendiente</option>
+                  <option value="IN_PROGRESS">En progreso</option>
+                  <option value="DONE">Completada</option>
+                </ShadcnSelect>
               </div>
-            </form>
-            <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">
-              Tip: si filtraste por usuario, se asigna automáticamente.
+
+              <div className="space-y-2">
+                <Label htmlFor="filter-priority">Prioridad</Label>
+                <ShadcnSelect id="filter-priority" value={filterPriority} onChange={(e) => setFilterPriority(e.target.value as any)}>
+                  <option value="all">Todas</option>
+                  <option value="LOW">Baja</option>
+                  <option value="MEDIUM">Media</option>
+                  <option value="HIGH">Alta</option>
+                </ShadcnSelect>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button variant="outline" onClick={refresh} disabled={refreshing} className="w-full sm:flex-1">
+                  {refreshing ? "Refrescando…" : "Refrescar"}
+                </Button>
+                {currentUser.role === "ADMIN" ? (
+                  <Button variant="default" onClick={() => setCreateOpen(true)} className="w-full sm:flex-1">
+                    Nueva tarea
+                  </Button>
+                ) : null}
+              </div>
             </div>
           </CardContent>
         </Card>
-      ) : null}
       </div>
 
       {isInitialLoading ? (
@@ -519,3 +425,10 @@ export default function KanbanBoard({
     </div>
   )
 }
+
+
+
+
+
+
+

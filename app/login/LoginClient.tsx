@@ -1,12 +1,13 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState, type FormEvent } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import toast from "react-hot-toast"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/shadcn/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/shadcn/ui/card"
 import { Button } from "@/components/shadcn/ui/button"
 import { Input } from "@/components/shadcn/ui/input"
 import { Label } from "@/components/shadcn/ui/label"
+import { fetchJsonOrThrow } from "@/lib/fetch-json"
 
 export default function LoginClient() {
   const router = useRouter()
@@ -21,20 +22,15 @@ export default function LoginClient() {
     e.preventDefault()
     setLoading(true)
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      })
-
-      let data: { error?: string } | null = null
-      try {
-        data = (await res.json()) as { error?: string }
-      } catch {
-        data = null
-      }
-
-      if (!res.ok) throw new Error(data?.error ?? "No se pudo iniciar sesión")
+      await fetchJsonOrThrow<{ ok: true }>(
+        "/api/auth/login",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        },
+        { defaultError: "No se pudo iniciar sesión", logTag: "POST /api/auth/login" }
+      )
 
       toast.success("Bienvenido")
       router.replace(nextPath)
@@ -47,11 +43,10 @@ export default function LoginClient() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-bg to-bg-subtle">
+    <main className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-slate-50 dark:bg-slate-950">
       <Card className="w-full max-w-md shadow-sm">
         <CardHeader className="space-y-2">
-          <CardTitle>Bienvenido</CardTitle>
-          <CardDescription>Accede a tu cuenta para continuar.</CardDescription>
+          <CardTitle>Iniciar sesión</CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-5">
@@ -86,12 +81,11 @@ export default function LoginClient() {
               {loading ? "Entrando…" : "Iniciar sesión"}
             </Button>
           </form>
-
-          <p className="text-xs text-slate-600 dark:text-slate-400 text-center leading-relaxed">
-            Al continuar, aceptas las políticas internas de acceso de tu organización.
-          </p>
         </CardContent>
       </Card>
     </main>
   )
 }
+
+
+

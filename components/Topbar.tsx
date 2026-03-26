@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import type { SVGProps } from "react"
 import { useEffect, useState } from "react"
@@ -7,6 +7,7 @@ import toast from "react-hot-toast"
 import { signOut } from "next-auth/react"
 import { useTheme } from "next-themes"
 import type { SessionUser } from "@/lib/session"
+import { fetchJsonOrThrow } from "@/lib/fetch-json"
 import { Button } from "@/components/shadcn/ui/button"
 import { Badge } from "@/components/shadcn/ui/badge"
 import { Card } from "@/components/shadcn/ui/card"
@@ -61,8 +62,7 @@ export default function Topbar({ user, onOpenMenu }: { user: SessionUser; onOpen
   async function logout() {
     setLoading(true)
     try {
-      const res = await fetch("/api/auth/logout", { method: "POST" })
-      if (!res.ok) throw new Error("No se pudo cerrar sesión")
+      await fetchJsonOrThrow<{ ok: true }>("/api/auth/logout", { method: "POST" }, { defaultError: "No se pudo cerrar sesión", logTag: "POST /api/auth/logout" })
       await signOut({ redirect: false })
       router.replace("/login")
       router.refresh()
@@ -120,3 +120,4 @@ export default function Topbar({ user, onOpenMenu }: { user: SessionUser; onOpen
     </header>
   )
 }
+
