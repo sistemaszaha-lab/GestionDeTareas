@@ -1,4 +1,4 @@
-﻿import * as React from "react"
+import * as React from "react"
 import { cn } from "@/lib/ui"
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -10,9 +10,9 @@ const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(({ className, varian
     "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium tracking-tight transition-colors"
 
   const variants: Record<NonNullable<BadgeProps["variant"]>, string> = {
-    default: "border-transparent bg-slate-900 text-white",
-    secondary: "border-transparent bg-slate-100 text-slate-900",
-    outline: "border-slate-200 bg-white text-slate-900",
+    default: "border-transparent bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900",
+    secondary: "border-transparent bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-50",
+    outline: "border-slate-200 bg-white text-slate-900 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-50",
     success: "border-transparent bg-emerald-600 text-white",
     danger: "border-transparent bg-rose-600 text-white"
   }

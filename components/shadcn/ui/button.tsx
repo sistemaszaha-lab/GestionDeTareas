@@ -9,16 +9,19 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "default", size = "default", type, ...props }, ref) => {
     const base =
-      "inline-flex select-none touch-manipulation items-center justify-center whitespace-nowrap rounded-xl font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/15 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 ring-offset-white"
+      "inline-flex select-none touch-manipulation items-center justify-center whitespace-nowrap rounded-xl font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/15 dark:focus-visible:ring-slate-100/20 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 ring-offset-slate-50 dark:ring-offset-slate-950"
 
     const variants: Record<NonNullable<ButtonProps["variant"]>, string> = {
-      default: "bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-900 active:scale-[0.98]",
+      default:
+        "bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-900 active:scale-[0.98] dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white",
       primary: "bg-primary text-white hover:opacity-90 active:opacity-95 active:scale-[0.98]",
       danger: "bg-danger text-white hover:opacity-90 active:opacity-95 active:scale-[0.98]",
-      secondary: "bg-slate-100 text-slate-900 hover:bg-slate-200 active:bg-slate-200 active:scale-[0.98]",
+      secondary:
+        "bg-slate-100 text-slate-900 hover:bg-slate-200 active:bg-slate-200 active:scale-[0.98] dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-800",
       outline:
-        "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:shadow-sm active:bg-slate-100 active:scale-[0.98]",
-      ghost: "bg-transparent text-slate-900 hover:bg-slate-100 active:bg-slate-100 active:scale-[0.98]"
+        "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50 hover:shadow-sm active:bg-slate-100 active:scale-[0.98] dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-50 dark:hover:bg-slate-900",
+      ghost:
+        "bg-transparent text-slate-900 hover:bg-slate-100 active:bg-slate-100 active:scale-[0.98] dark:text-slate-50 dark:hover:bg-slate-900 dark:active:bg-slate-900"
     }
 
     const sizes: Record<NonNullable<ButtonProps["size"]>, string> = {

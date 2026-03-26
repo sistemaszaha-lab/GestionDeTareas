@@ -2,12 +2,14 @@
 
 import type { TaskPriority, TaskStatus, UserRole } from "@prisma/client"
 import { useMemo, useState } from "react"
+import toast from "react-hot-toast"
 import { Button } from "@/components/shadcn/ui/button"
 import { Card, CardContent } from "@/components/shadcn/ui/card"
 import { Badge } from "@/components/shadcn/ui/badge"
 import { Input } from "@/components/shadcn/ui/input"
 import { Label } from "@/components/shadcn/ui/label"
 import { Select as ShadcnSelect } from "@/components/shadcn/ui/select"
+import { cn } from "@/lib/ui"
 
 type UserLite = { id: string; name: string; username: string; role: UserRole }
 
@@ -25,11 +27,18 @@ type TaskWithRelations = {
   status: TaskStatus
   priority: TaskPriority
   assignedToId: string
+  dueDate: string | Date | null
   assignedTo: UserLite
   comments: CommentWithUser[]
 }
 
 type CurrentUser = { id: string; role: "ADMIN" | "EMPLOYEE" }
+
+function formatDueDate(value: string | Date) {
+  const d = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleDateString("es-MX")
+}
 
 export default function TaskCard({
   task,
@@ -81,6 +90,9 @@ export default function TaskCard({
     setSaving(true)
     try {
       await onQuickStatusChange(status)
+      toast.success("Estado actualizado")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo actualizar")
     } finally {
       setSaving(false)
     }
@@ -92,6 +104,9 @@ export default function TaskCard({
     setSaving(true)
     try {
       await onQuickAssigneeChange(assignedToId)
+      toast.success("Asignación actualizada")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo reasignar")
     } finally {
       setSaving(false)
     }
@@ -106,6 +121,9 @@ export default function TaskCard({
       await onAddComment(content)
       setCommentText("")
       setCommentsOpen(true)
+      toast.success("Comentario agregado")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "No se pudo comentar")
     } finally {
       setCommentSending(false)
     }
@@ -117,22 +135,52 @@ export default function TaskCard({
   const statusLabel = task.status === "PENDING" ? "Pendiente" : task.status === "IN_PROGRESS" ? "En progreso" : "Hecha"
   const priorityLabel = task.priority === "LOW" ? "Baja" : task.priority === "MEDIUM" ? "Media" : "Alta"
 
+  const dueLabel = task.dueDate ? formatDueDate(task.dueDate) : null
+  const dueTime = task.dueDate ? new Date(task.dueDate).getTime() : null
+  const isOverdue = Boolean(dueTime && task.status !== "DONE" && dueTime < Date.now())
+
+  const priorityAccent =
+    !isOverdue && task.status !== "DONE" && task.priority === "HIGH"
+      ? "border-amber-300 dark:border-amber-500/40 bg-amber-50/30 dark:bg-amber-950/15"
+      : ""
+
   return (
-    <Card className="group shadow-none transition-[box-shadow,border-color] hover:border-slate-300 hover:shadow-sm">
+    <Card
+      className={cn(
+        "group shadow-none transition-[box-shadow,border-color,background-color] hover:shadow-sm",
+        "hover:border-slate-300 dark:hover:border-slate-700",
+        isOverdue ? "border-rose-300 dark:border-rose-500/40 bg-rose-50/40 dark:bg-rose-950/20" : "",
+        priorityAccent
+      )}
+    >
       <CardContent className="p-4">
         <button className="w-full text-left" onClick={onOpen} type="button">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-slate-900 truncate">{task.title}</div>
+              <div className="text-sm font-semibold text-slate-900 dark:text-slate-50 truncate">{task.title}</div>
               {task.description ? (
-                <div className="mt-1 text-xs text-slate-600 line-clamp-2">{task.description}</div>
+                <div className="mt-1 text-xs text-slate-600 dark:text-slate-400 line-clamp-2">{task.description}</div>
               ) : null}
             </div>
-            <div className="shrink-0 text-xs text-slate-500 whitespace-nowrap">{task.comments.length} com.</div>
+            <div className="shrink-0 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{task.comments.length} com.</div>
           </div>
 
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <div className="text-xs text-slate-600 truncate">Asignado: {task.assignedTo.name}</div>
+          <div className="mt-3 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-xs text-slate-600 dark:text-slate-400 truncate">
+                Asignado a <span className="font-medium text-slate-900 dark:text-slate-50">{task.assignedTo.name}</span>
+                <span className="text-slate-500 dark:text-slate-400"> (@{task.assignedTo.username})</span>
+              </div>
+              {dueLabel ? (
+                <div className={cn("mt-1 text-xs truncate", isOverdue ? "text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-slate-400")}>
+                  {isOverdue ? "Vencida: " : "Vence: "}
+                  {dueLabel}
+                </div>
+              ) : (
+                <div className="mt-1 text-xs text-slate-500 dark:text-slate-400 truncate">Sin vencimiento</div>
+              )}
+            </div>
+
             <div className="flex items-center gap-2">
               <Badge variant={priorityBadgeVariant as any}>{priorityLabel}</Badge>
               <Badge variant={statusBadgeVariant as any}>{statusLabel}</Badge>
@@ -142,8 +190,8 @@ export default function TaskCard({
 
         <div className="mt-4 space-y-4">
           <div>
-            <div className="text-xs font-medium text-slate-700">Estado</div>
-            <div className="mt-2 flex flex-wrap rounded-full border border-slate-200 bg-white p-1 gap-1">
+            <div className="text-xs font-medium text-slate-700 dark:text-slate-200">Estado</div>
+            <div className="mt-2 flex flex-wrap rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40 p-1 gap-1">
               {statusOrder.map((s) => {
                 const active = s === task.status
                 const label = s === "PENDING" ? "Pendiente" : s === "IN_PROGRESS" ? "En progreso" : "Hecha"
@@ -158,7 +206,7 @@ export default function TaskCard({
                     aria-pressed={active}
                     className={[
                       "h-9 rounded-full px-3 text-xs font-semibold md:h-7 md:text-[11px]",
-                      active ? "" : "text-slate-700"
+                      active ? "" : "text-slate-700 dark:text-slate-200"
                     ].join(" ")}
                     title={canMove ? `Cambiar a ${label}` : "No puedes cambiar el estado"}
                   >
@@ -190,16 +238,19 @@ export default function TaskCard({
           {canComment ? (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="text-xs font-medium text-slate-700">Comentarios</div>
+                <div className="text-xs font-medium text-slate-700 dark:text-slate-200">Comentarios</div>
                 <button
                   type="button"
-                  className="text-xs text-slate-600 hover:text-slate-900 underline underline-offset-4"
+                  className="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-50 underline underline-offset-4"
                   onClick={() => setCommentsOpen((v) => !v)}
                 >
                   {commentsOpen ? "Ocultar" : "Ver"}
                 </button>
               </div>
-              <Label htmlFor={`comment-${task.id}`} className="sr-only">Nuevo comentario</Label>
+
+              <Label htmlFor={`comment-${task.id}`} className="sr-only">
+                Nuevo comentario
+              </Label>
               <div className="flex gap-2 items-end">
                 <Input
                   id={`comment-${task.id}`}
@@ -229,23 +280,28 @@ export default function TaskCard({
               {commentsOpen ? (
                 <div className="space-y-2">
                   {task.comments.length === 0 ? (
-                    <div className="text-xs text-slate-500">Aún no hay comentarios.</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Aún no hay comentarios.</div>
                   ) : (
                     recentComments.map((c) => (
-                      <div key={c.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                      <div
+                        key={c.id}
+                        className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40 px-3 py-2"
+                      >
                         <div className="flex items-center justify-between gap-2">
-                          <div className="text-xs font-semibold truncate text-slate-900">{c.user.name}</div>
-                          <div className="text-[11px] text-slate-500 whitespace-nowrap">
+                          <div className="text-xs font-semibold truncate text-slate-900 dark:text-slate-50">{c.user.name}</div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                             {new Date(c.createdAt).toLocaleString()}
                           </div>
                         </div>
-                        <div className="mt-1 text-sm text-slate-800 whitespace-pre-wrap">{c.content}</div>
+                        <div className="mt-1 text-sm text-slate-800 dark:text-slate-50 whitespace-pre-wrap">{c.content}</div>
                       </div>
                     ))
                   )}
 
                   {task.comments.length > recentComments.length ? (
-                    <div className="text-[11px] text-slate-500">Mostrando los últimos {recentComments.length}.</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Mostrando los últimos {recentComments.length}.
+                    </div>
                   ) : null}
                 </div>
               ) : null}
@@ -253,7 +309,7 @@ export default function TaskCard({
           ) : null}
 
           {!canMove && !canReassign && !canComment ? (
-            <div className="text-[11px] text-slate-500">Solo el asignado o admin puede mover.</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400">Solo el asignado o admin puede mover.</div>
           ) : null}
 
           <div className="flex justify-end">
@@ -266,6 +322,3 @@ export default function TaskCard({
     </Card>
   )
 }
-
-
-

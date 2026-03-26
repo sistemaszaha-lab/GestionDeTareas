@@ -2,6 +2,7 @@ import "./globals.css"
 import type { Metadata, Viewport } from "next"
 import ToastProvider from "@/components/ToastProvider"
 import PwaRegister from "@/components/PwaRegister"
+import ThemeProvider from "@/components/ThemeProvider"
 
 export const metadata: Metadata = {
   title: "Gestión de tareas",
@@ -30,11 +31,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <body>
-        <ToastProvider />
-        <PwaRegister />
-        {children}
+        <ThemeProvider>
+          <ToastProvider />
+          <PwaRegister />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )

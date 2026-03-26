@@ -1,6 +1,6 @@
-﻿"use client"
+"use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type FormEvent } from "react"
 import type { TaskPriority, UserRole } from "@prisma/client"
 import {
   Dialog,
@@ -32,7 +32,13 @@ export default function CreateTaskDialog({
   onOpenChange: (open: boolean) => void
   users: UserLite[]
   currentUser: CurrentUser
-  onCreate: (input: { title: string; description: string | null; assignedToId: string; priority: TaskPriority }) => Promise<void>
+  onCreate: (input: {
+    title: string
+    description: string | null
+    assignedToId: string
+    priority: TaskPriority
+    dueDate: string | null
+  }) => Promise<void>
 }) {
   const canAdmin = currentUser.role === "ADMIN"
 
@@ -46,6 +52,7 @@ export default function CreateTaskDialog({
   const [description, setDescription] = useState("")
   const [assignedToId, setAssignedToId] = useState<string>(defaultAssignedToId)
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM")
+  const [dueDate, setDueDate] = useState("")
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -54,10 +61,12 @@ export default function CreateTaskDialog({
     setDescription("")
     setAssignedToId(defaultAssignedToId)
     setPriority("MEDIUM")
+    setDueDate("")
     setSaving(false)
   }, [open, defaultAssignedToId])
 
-  async function submit() {
+  async function submit(e?: FormEvent) {
+    e?.preventDefault()
     const t = title.trim()
     if (!t) return
     setSaving(true)
@@ -66,7 +75,8 @@ export default function CreateTaskDialog({
         title: t,
         description: description.trim() ? description.trim() : null,
         assignedToId: canAdmin ? assignedToId : currentUser.id,
-        priority
+        priority,
+        dueDate: dueDate ? dueDate : null
       })
       onOpenChange(false)
     } finally {
@@ -82,7 +92,7 @@ export default function CreateTaskDialog({
           <DialogDescription>Crea una tarea y quedará visible inmediatamente en el tablero.</DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 pb-2 space-y-4">
+        <form onSubmit={submit} className="px-6 pb-2 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="task-title">Título</Label>
             <Input
@@ -104,51 +114,50 @@ export default function CreateTaskDialog({
             />
           </div>
 
-          {canAdmin ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="task-priority">Prioridad</Label>
-              <ShadcnSelect
-                id="task-priority"
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as TaskPriority)}
-              >
-                <option value="LOW">Baja</option>
-                <option value="MEDIUM">Media</option>
-                <option value="HIGH">Alta</option>
-              </ShadcnSelect>
+              <Label htmlFor="task-due">Vence el</Label>
+              <Input id="task-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              <div className="text-xs text-slate-600 dark:text-slate-400">Opcional</div>
             </div>
-          ) : null}
 
-          {canAdmin && users.length ? (
-            <div className="space-y-2">
-              <Label htmlFor="task-assigned">Asignar a</Label>
-              <ShadcnSelect
-                id="task-assigned"
-                value={assignedToId}
-                onChange={(e) => setAssignedToId(e.target.value)}
-              >
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </ShadcnSelect>
-            </div>
-          ) : null}
-        </div>
+            {canAdmin ? (
+              <div className="space-y-2">
+                <Label htmlFor="task-priority">Prioridad</Label>
+                <ShadcnSelect id="task-priority" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
+                  <option value="LOW">Baja</option>
+                  <option value="MEDIUM">Media</option>
+                  <option value="HIGH">Alta</option>
+                </ShadcnSelect>
+              </div>
+            ) : null}
 
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" disabled={saving}>
-              Cancelar
+            {canAdmin && users.length ? (
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="task-assigned">Asignar a</Label>
+                <ShadcnSelect id="task-assigned" value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)}>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </ShadcnSelect>
+              </div>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={saving}>
+                Cancelar
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={saving || !title.trim()}>
+              {saving ? "Creando…" : "Crear tarea"}
             </Button>
-          </DialogClose>
-          <Button onClick={submit} disabled={saving || !title.trim()}>
-            {saving ? "Creando…" : "Crear tarea"}
-          </Button>
-        </DialogFooter>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )
 }
-

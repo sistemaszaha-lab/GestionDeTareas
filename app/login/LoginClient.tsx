@@ -47,7 +47,7 @@ export default function LoginClient() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-white to-slate-50">
+    <main className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-bg to-bg-subtle">
       <Card className="w-full max-w-md shadow-sm">
         <CardHeader className="space-y-2">
           <CardTitle>Bienvenido</CardTitle>
@@ -87,7 +87,7 @@ export default function LoginClient() {
             </Button>
           </form>
 
-          <p className="text-xs text-slate-400 text-center leading-relaxed">
+          <p className="text-xs text-slate-600 dark:text-slate-400 text-center leading-relaxed">
             Al continuar, aceptas las políticas internas de acceso de tu organización.
           </p>
         </CardContent>

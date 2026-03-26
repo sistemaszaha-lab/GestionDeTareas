@@ -22,14 +22,14 @@ export function SidebarContent({ user, onNavigate }: { user: SessionUser; onNavi
         <CardContent className="pt-0">
           <nav className="flex flex-col gap-1 text-base md:text-sm">
             <Link
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 md:py-2 text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:bg-slate-900/60 hover:text-slate-900 dark:text-slate-50 md:py-2"
               href="/dashboard"
               onClick={onNavigate}
             >
               Dashboard
             </Link>
             <Link
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 md:py-2 text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:bg-slate-900/60 hover:text-slate-900 dark:text-slate-50 md:py-2"
               href="/dashboard/mis-tareas"
               onClick={onNavigate}
             >
@@ -39,7 +39,7 @@ export function SidebarContent({ user, onNavigate }: { user: SessionUser; onNavi
         </CardContent>
 
         <CardFooter className="justify-between">
-          <div className="truncate text-xs text-slate-500">{user.username}</div>
+          <div className="truncate text-xs text-slate-600 dark:text-slate-400">{user.username}</div>
         </CardFooter>
       </Card>
     </div>

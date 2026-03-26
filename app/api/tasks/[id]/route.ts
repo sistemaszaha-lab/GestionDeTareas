@@ -1,10 +1,17 @@
-﻿import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/prisma"
 import { jsonError, jsonOk } from "@/lib/http"
 import { requireSession } from "@/lib/server-auth"
 import { updateTaskSchema } from "@/lib/validators"
 import type { NextRequest } from "next/server"
 
 export const runtime = "nodejs"
+
+function parseDueDate(input: string | null): Date | null {
+  if (!input) return null
+  const d = new Date(`${input}T23:59:59.999Z`)
+  if (Number.isNaN(d.getTime())) return null
+  return d
+}
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const user = await requireSession(req)
@@ -27,9 +34,13 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   const attemptedTextChange =
     (typeof parsed.data.title === "string" && parsed.data.title !== existing.title) ||
     (typeof parsed.data.description !== "undefined" && parsed.data.description !== existing.description)
-  if (!canEditAll && (attemptedAssigneeChange || attemptedPriorityChange || attemptedTextChange)) {
-    return jsonError("Solo admin puede editar título/descr., prioridad o reasignar", 403)
+  const attemptedDueDateChange = typeof parsed.data.dueDate !== "undefined"
+  if (!canEditAll && (attemptedAssigneeChange || attemptedPriorityChange || attemptedTextChange || attemptedDueDateChange)) {
+    return jsonError("Solo admin puede editar título/descr., prioridad, vencimiento o reasignar", 403)
   }
+
+  const dueDatePatch =
+    typeof parsed.data.dueDate === "undefined" ? {} : { dueDate: parseDueDate(parsed.data.dueDate ?? null) }
 
   const task = await prisma.task.update({
     where: { id },
@@ -38,7 +49,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       ...(typeof parsed.data.description !== "undefined" ? { description: parsed.data.description ?? null } : {}),
       ...(parsed.data.status ? { status: parsed.data.status as any } : {}),
       ...(parsed.data.priority ? { priority: parsed.data.priority as any } : {}),
-      ...(parsed.data.assignedToId ? { assignedToId: parsed.data.assignedToId } : {})
+      ...(parsed.data.assignedToId ? { assignedToId: parsed.data.assignedToId } : {}),
+      ...dueDatePatch
     },
     include: {
       assignedTo: { select: { id: true, name: true, username: true, role: true } },
@@ -61,5 +73,3 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
   await prisma.task.delete({ where: { id } }).catch(() => null)
   return jsonOk({ ok: true })
 }
-
-

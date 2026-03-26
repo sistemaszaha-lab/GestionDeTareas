@@ -10,6 +10,5 @@ body {
 }
 
 body {
-  @apply bg-bg text-fg overflow-x-hidden;
+  @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 overflow-x-hidden;
 }
-

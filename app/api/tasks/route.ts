@@ -1,9 +1,17 @@
-﻿import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/prisma"
 import { jsonError, jsonOk } from "@/lib/http"
 import { requireSession } from "@/lib/server-auth"
 import { createTaskSchema } from "@/lib/validators"
 
 export const runtime = "nodejs"
+
+function parseDueDate(input: string | null | undefined): Date | null {
+  if (!input) return null
+  // Treat as end-of-day UTC for a predictable "due date" semantics.
+  const d = new Date(`${input}T23:59:59.999Z`)
+  if (Number.isNaN(d.getTime())) return null
+  return d
+}
 
 export async function GET(req: Request) {
   const user = await requireSession(req)
@@ -42,12 +50,15 @@ export async function POST(req: Request) {
   const parsed = createTaskSchema.safeParse(body)
   if (!parsed.success) return jsonError("Datos inválidos", 400)
 
+  const dueDate = parseDueDate(parsed.data.dueDate ?? null)
+
   const task = await prisma.task.create({
     data: {
       title: parsed.data.title,
       description: parsed.data.description ?? null,
       assignedToId: parsed.data.assignedToId,
-      ...(parsed.data.priority ? { priority: parsed.data.priority as any } : {})
+      ...(parsed.data.priority ? { priority: parsed.data.priority as any } : {}),
+      ...(parsed.data.dueDate !== undefined ? { dueDate } : {})
     },
     include: {
       assignedTo: { select: { id: true, name: true, username: true, role: true } },
@@ -60,4 +71,3 @@ export async function POST(req: Request) {
 
   return jsonOk({ task }, { status: 201 })
 }
-

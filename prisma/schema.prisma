@@ -86,6 +86,7 @@ model Task {
   status       TaskStatus @default(PENDING)
   priority     TaskPriority @default(MEDIUM)
   assignedToId String
+  dueDate      DateTime?
   createdAt    DateTime   @default(now())
 
   assignedTo User      @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: Restrict)
@@ -94,6 +95,7 @@ model Task {
   @@index([status])
   @@index([priority])
   @@index([assignedToId])
+  @@index([dueDate])
 }
 
 model Comment {

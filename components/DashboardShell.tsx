@@ -54,7 +54,7 @@ function DashboardShellInner({ user, children }: { user: SessionUser; children: 
         <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="Menú">
           <div className="absolute inset-0 bg-black/35" onClick={() => setMenuOpen(false)} />
 
-          <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] overflow-y-auto pt-[env(safe-area-inset-top)] overscroll-contain border-r border-slate-200 bg-slate-50 p-4 shadow-xl">
+          <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] overflow-y-auto pt-[env(safe-area-inset-top)] overscroll-contain border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4 shadow-xl">
             <div className="mb-2 flex items-center justify-end">
               <Button
                 ref={closeButtonRef}

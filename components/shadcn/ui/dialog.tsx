@@ -101,7 +101,8 @@ function DialogContent({ className, children }: { className?: string; children: 
           role="dialog"
           aria-modal="true"
           className={cn(
-            "w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-xl",
+            "w-full max-w-lg rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-xl",
+            "dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-50",
             "animate-in fade-in-0 zoom-in-95",
             className
           )}
@@ -123,11 +124,13 @@ function DialogFooter({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 }
 
 function DialogTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h2 className={cn("text-lg font-semibold tracking-[-0.02em] text-slate-900", className)} {...props} />
+  return (
+    <h2 className={cn("text-lg font-semibold tracking-[-0.02em] text-slate-900 dark:text-slate-50", className)} {...props} />
+  )
 }
 
 function DialogDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn("text-sm text-slate-500", className)} {...props} />
+  return <p className={cn("text-sm text-slate-500 dark:text-slate-400", className)} {...props} />
 }
 
 export {

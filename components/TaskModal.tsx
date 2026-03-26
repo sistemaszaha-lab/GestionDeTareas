@@ -2,7 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react"
 import type { TaskPriority, TaskStatus, UserRole } from "@prisma/client"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/shadcn/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/shadcn/ui/dialog"
 import { Button } from "@/components/shadcn/ui/button"
 import { Input } from "@/components/shadcn/ui/input"
 import { Textarea } from "@/components/shadcn/ui/textarea"
@@ -10,6 +17,7 @@ import { Label } from "@/components/shadcn/ui/label"
 import { Select as ShadcnSelect } from "@/components/shadcn/ui/select"
 import { Badge } from "@/components/shadcn/ui/badge"
 import { Card, CardContent } from "@/components/shadcn/ui/card"
+import { cn } from "@/lib/ui"
 
 type UserLite = { id: string; name: string; username: string; role: UserRole }
 
@@ -27,11 +35,24 @@ type TaskWithRelations = {
   status: TaskStatus
   priority: TaskPriority
   assignedToId: string
+  dueDate: string | Date | null
   assignedTo: UserLite
   comments: CommentWithUser[]
 }
 
 type CurrentUser = { id: string; role: "ADMIN" | "EMPLOYEE" }
+
+function toInputDate(value: string | Date | null | undefined) {
+  if (!value) return ""
+  const d = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(d.getTime())) return ""
+  return d.toISOString().slice(0, 10)
+}
+
+function dueDateToDate(input: string) {
+  const d = new Date(`${input}T23:59:59.999Z`)
+  return Number.isNaN(d.getTime()) ? null : d
+}
 
 export default function TaskModal(props: {
   open: boolean
@@ -40,7 +61,13 @@ export default function TaskModal(props: {
   users: UserLite[]
   currentUser: CurrentUser
   onClose: () => void
-  onCreate?: (input: { title: string; description: string | null; assignedToId: string; priority: TaskPriority }) => Promise<void>
+  onCreate?: (input: {
+    title: string
+    description: string | null
+    assignedToId: string
+    priority: TaskPriority
+    dueDate: string | null
+  }) => Promise<void>
   onUpdate?: (
     id: string,
     patch: Partial<{
@@ -49,6 +76,7 @@ export default function TaskModal(props: {
       status: TaskStatus
       priority: TaskPriority
       assignedToId: string
+      dueDate: string | null
     }>
   ) => Promise<void>
   onDelete?: (id: string) => Promise<void>
@@ -67,6 +95,7 @@ export default function TaskModal(props: {
   const [assignedToId, setAssignedToId] = useState<string>(users[0]?.id ?? "")
   const [status, setStatus] = useState<TaskStatus>("PENDING")
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM")
+  const [dueDate, setDueDate] = useState("")
   const [comment, setComment] = useState("")
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -79,6 +108,7 @@ export default function TaskModal(props: {
       setAssignedToId(users[0]?.id ?? "")
       setStatus("PENDING")
       setPriority("MEDIUM")
+      setDueDate("")
       setComment("")
       return
     }
@@ -88,6 +118,7 @@ export default function TaskModal(props: {
     setAssignedToId(task.assignedToId)
     setStatus(task.status)
     setPriority(task.priority)
+    setDueDate(toInputDate(task.dueDate))
     setComment("")
   }, [open, mode, task, users])
 
@@ -100,7 +131,8 @@ export default function TaskModal(props: {
         title: title.trim(),
         description: description.trim() ? description.trim() : null,
         assignedToId,
-        priority
+        priority,
+        dueDate: dueDate ? dueDate : null
       })
     } finally {
       setSaving(false)
@@ -117,6 +149,7 @@ export default function TaskModal(props: {
         patch.description = description.trim() ? description.trim() : null
         patch.assignedToId = assignedToId
         patch.priority = priority
+        patch.dueDate = dueDate ? dueDate : null
       }
       if (canEditStatus) patch.status = status
       await props.onUpdate(task.id, patch)
@@ -154,6 +187,9 @@ export default function TaskModal(props: {
   const statusBadgeVariant = status === "DONE" ? "success" : status === "IN_PROGRESS" ? "default" : "secondary"
   const priorityBadgeVariant = priority === "HIGH" ? "danger" : priority === "LOW" ? "secondary" : "outline"
 
+  const dueDateObj = dueDate ? dueDateToDate(dueDate) : null
+  const isOverdue = Boolean(dueDateObj && status !== "DONE" && dueDateObj.getTime() < Date.now())
+
   return (
     <Dialog
       open={open}
@@ -189,11 +225,7 @@ export default function TaskModal(props: {
 
               <div className="space-y-2">
                 <Label htmlFor="task-priority">Prioridad</Label>
-                <ShadcnSelect
-                  id="task-priority"
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                >
+                <ShadcnSelect id="task-priority" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
                   <option value="LOW">Baja</option>
                   <option value="MEDIUM">Media</option>
                   <option value="HIGH">Alta</option>
@@ -201,12 +233,13 @@ export default function TaskModal(props: {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="task-due">Vence el</Label>
+                <Input id="task-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="task-assigned">Asignar a</Label>
-                <ShadcnSelect
-                  id="task-assigned"
-                  value={assignedToId}
-                  onChange={(e) => setAssignedToId(e.target.value)}
-                >
+                <ShadcnSelect id="task-assigned" value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)}>
                   {users.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name}
@@ -230,18 +263,28 @@ export default function TaskModal(props: {
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={priorityBadgeVariant as any}>{priority}</Badge>
               <Badge variant={statusBadgeVariant as any}>{status}</Badge>
-              <span className="text-xs text-slate-500">Asignado: {task.assignedTo.name}</span>
+              <span className="text-xs text-slate-600 dark:text-slate-400">
+                Asignado: <span className="font-medium text-slate-900 dark:text-slate-50">{task.assignedTo.name}</span>
+              </span>
+              {dueDateObj ? (
+                <span
+                  className={cn(
+                    "text-xs",
+                    isOverdue ? "text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-slate-400"
+                  )}
+                >
+                  {isOverdue ? "Vencida: " : "Vence: "}
+                  {dueDateObj.toLocaleDateString("es-MX")}
+                </span>
+              ) : (
+                <span className="text-xs text-slate-500 dark:text-slate-400">Sin vencimiento</span>
+              )}
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="detail-title">Título</Label>
-                <Input
-                  id="detail-title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  disabled={!canAdmin}
-                />
+                <Input id="detail-title" value={title} onChange={(e) => setTitle(e.target.value)} disabled={!canAdmin} />
               </div>
 
               <div className="space-y-2">
@@ -288,6 +331,17 @@ export default function TaskModal(props: {
                 </ShadcnSelect>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="detail-due">Vence el</Label>
+                <Input
+                  id="detail-due"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  disabled={!canAdmin}
+                />
+              </div>
+
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="detail-description">Descripción</Label>
                 <Textarea
@@ -300,7 +354,7 @@ export default function TaskModal(props: {
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-xs text-slate-500">Comentarios ({task.comments.length})</div>
+              <div className="text-xs text-slate-600 dark:text-slate-400">Comentarios ({task.comments.length})</div>
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
                 {canAdmin ? (
                   <Button variant="danger" onClick={remove} disabled={deleting} className="w-full sm:w-auto">
@@ -313,18 +367,20 @@ export default function TaskModal(props: {
               </div>
             </div>
 
-            <div className="max-h-64 overflow-auto rounded-2xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+            <div className="max-h-64 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 space-y-2">
               {task.comments.length === 0 ? (
-                <div className="text-xs text-slate-500">Sin comentarios</div>
+                <div className="text-xs text-slate-600 dark:text-slate-400">Sin comentarios</div>
               ) : (
                 task.comments.map((c) => (
                   <Card key={c.id}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between gap-2">
-                        <div className="text-xs font-medium text-slate-900">{c.user.name}</div>
-                        <div className="text-[11px] text-slate-500">{new Date(c.createdAt).toLocaleString()}</div>
+                        <div className="text-xs font-medium text-slate-900 dark:text-slate-50">{c.user.name}</div>
+                        <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                          {new Date(c.createdAt).toLocaleString()}
+                        </div>
                       </div>
-                      <div className="mt-2 text-sm text-slate-800 whitespace-pre-wrap">{c.content}</div>
+                      <div className="mt-2 text-sm text-slate-900 dark:text-slate-50 whitespace-pre-wrap">{c.content}</div>
                     </CardContent>
                   </Card>
                 ))
@@ -351,4 +407,3 @@ export default function TaskModal(props: {
     </Dialog>
   )
 }
-

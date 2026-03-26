@@ -27,13 +27,13 @@ export default function Modal({ open, title, onClose, children, className }: Pro
     <div className="fixed inset-0 z-50">
       <button className="absolute inset-0 bg-black/30" onClick={onClose} aria-label="Cerrar" />
       <div className="absolute inset-0 grid place-items-center p-4">
-        <div className={cn("w-full max-w-2xl rounded-xl bg-card shadow-soft border border-border", className)}>
-          <div className="px-5 py-4 border-b border-border flex items-center justify-between gap-3">
+        <div className={cn("w-full max-w-2xl rounded-xl bg-white dark:bg-slate-950/40 shadow-soft border border-slate-200 dark:border-slate-800", className)}>
+          <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
             <div className="min-w-0">
               {title ? <h2 className="text-base font-semibold truncate">{title}</h2> : null}
             </div>
             <button
-              className="h-10 shrink-0 rounded-md px-3 text-sm text-fg-muted hover:text-fg"
+              className="h-10 shrink-0 rounded-md px-3 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:text-slate-50"
               type="button"
               onClick={onClose}
             >
