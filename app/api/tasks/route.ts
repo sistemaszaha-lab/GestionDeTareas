@@ -2,6 +2,7 @@
 import { jsonError, jsonException, jsonOk } from "@/lib/http"
 import { requireSession } from "@/lib/server-auth"
 import { createTaskSchema } from "@/lib/validators"
+import { Prisma } from "@prisma/client"
 
 export const runtime = "nodejs"
 
@@ -11,6 +12,18 @@ function parseDueDate(input: string | null | undefined): Date | null {
   const d = new Date(`${input}T23:59:59.999Z`)
   if (Number.isNaN(d.getTime())) return null
   return d
+}
+
+function prismaErrorResponse(err: unknown) {
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === "P2003") return jsonError("El usuario asignado no existe.", 400)
+  }
+
+  if (err instanceof Prisma.PrismaClientValidationError) {
+    return jsonError("Datos inválidos", 400)
+  }
+
+  return null
 }
 
 export async function GET(req: Request) {
@@ -41,7 +54,7 @@ export async function GET(req: Request) {
 
     return jsonOk({ tasks })
   } catch (err) {
-    return jsonException(err, { route: "GET /api/tasks" })
+    return prismaErrorResponse(err) ?? jsonException(err, { route: "GET /api/tasks" })
   }
 }
 
@@ -52,8 +65,21 @@ export async function POST(req: Request) {
     if (user.role !== "ADMIN") return jsonError("Forbidden", 403)
 
     const body = await req.json().catch(() => null)
+    if (!body) return jsonError("Body requerido", 400)
+
     const parsed = createTaskSchema.safeParse(body)
-    if (!parsed.success) return jsonError("Datos inválidos", 400)
+    if (!parsed.success) {
+      console.warn("POST /api/tasks validation", {
+        issues: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message }))
+      })
+      return jsonError("Datos inválidos", 400)
+    }
+
+    const assignedUser = await prisma.user.findUnique({
+      where: { id: parsed.data.assignedToId },
+      select: { id: true }
+    })
+    if (!assignedUser) return jsonError("El usuario asignado no existe.", 400)
 
     const dueDate = parseDueDate(parsed.data.dueDate ?? null)
 
@@ -76,6 +102,6 @@ export async function POST(req: Request) {
 
     return jsonOk({ task }, { status: 201 })
   } catch (err) {
-    return jsonException(err, { route: "POST /api/tasks" })
+    return prismaErrorResponse(err) ?? jsonException(err, { route: "POST /api/tasks" })
   }
 }
