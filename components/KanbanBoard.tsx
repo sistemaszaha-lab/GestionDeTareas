@@ -1,6 +1,7 @@
-ï»¿"use client"
+"use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 import type { TaskPriority, TaskStatus, UserRole } from "@prisma/client"
 import { Button } from "@/components/shadcn/ui/button"
@@ -11,6 +12,7 @@ import { Select as ShadcnSelect } from "@/components/shadcn/ui/select"
 import TaskCard from "@/components/TaskCard"
 import TaskModal from "@/components/TaskModal"
 import CreateTaskDialog from "@/components/CreateTaskDialog"
+import CreateUserDialog from "@/components/CreateUserDialog"
 import { fetchJsonOrThrow } from "@/lib/fetch-json"
 
 type UserLite = { id: string; name: string; username: string; role: UserRole }
@@ -35,7 +37,7 @@ type TaskWithRelations = {
   comments: CommentWithUser[]
 }
 
-type CurrentUser = { id: string; name: string; username: string; role: "ADMIN" | "EMPLOYEE" }
+type CurrentUser = { id: string; name: string; username: string; role: "ADMIN" | "USER" }
 
 const columns: Array<{ key: TaskStatus; title: string }> = [
   { key: "PENDING", title: "Pendiente" },
@@ -56,12 +58,14 @@ export default function KanbanBoard({
   forceUserId?: string
   pageTitle?: string
 }) {
+  const router = useRouter()
   const [tasks, setTasks] = useState<TaskWithRelations[]>(initialTasks)
   const [filterUserId, setFilterUserId] = useState<string>(forceUserId ?? "all")
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "all">("all")
   const [filterPriority, setFilterPriority] = useState<TaskPriority | "all">("all")
   const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [createUserOpen, setCreateUserOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const isInitialLoading = refreshing && tasks.length === 0
 
@@ -293,14 +297,19 @@ export default function KanbanBoard({
                 </ShadcnSelect>
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                 <Button variant="outline" onClick={refresh} disabled={refreshing} className="w-full sm:flex-1">
-                  {refreshing ? "Refrescandoâ€¦" : "Refrescar"}
+                  {refreshing ? "Refrescando…" : "Refrescar"}
                 </Button>
                 {currentUser.role === "ADMIN" ? (
-                  <Button variant="default" onClick={() => setCreateOpen(true)} className="w-full sm:flex-1">
-                    Nueva tarea
-                  </Button>
+                  <>
+                    <Button variant="outline" onClick={() => setCreateUserOpen(true)} className="w-full sm:flex-1">
+                      Nuevo usuario
+                    </Button>
+                    <Button variant="default" onClick={() => setCreateOpen(true)} className="w-full sm:flex-1">
+                      Nueva tarea
+                    </Button>
+                  </>
                 ) : null}
               </div>
             </div>
@@ -320,7 +329,7 @@ export default function KanbanBoard({
         <Card>
           <CardContent className="p-10 text-center">
             <div className="text-sm font-medium text-slate-900 dark:text-slate-50">No hay tareas</div>
-            <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">Cuando se creen, aparecerÃ¡n aquÃ­ agrupadas por estado.</div>
+            <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">Cuando se creen, aparecerán aquí agrupadas por estado.</div>
           </CardContent>
         </Card>
       ) : null}
@@ -387,6 +396,15 @@ export default function KanbanBoard({
             toast.error(e instanceof Error ? e.message : "Error")
             throw e
           }
+        }}
+      />
+
+      <CreateUserDialog
+        open={createUserOpen}
+        onOpenChange={setCreateUserOpen}
+        currentUser={currentUser}
+        onCreated={() => {
+          router.refresh()
         }}
       />
 

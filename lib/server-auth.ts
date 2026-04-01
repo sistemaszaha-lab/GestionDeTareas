@@ -8,7 +8,7 @@ export type AuthUser = {
   id: string
   username: string
   name: string
-  role: "ADMIN" | "EMPLOYEE"
+  role: "ADMIN" | "USER"
 }
 
 export async function requireSession(_req: Request): Promise<AuthUser | null> {

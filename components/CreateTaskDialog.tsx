@@ -19,7 +19,7 @@ import { Select as ShadcnSelect } from "@/components/shadcn/ui/select"
 
 type UserLite = { id: string; name: string; username: string; role: UserRole }
 
-type CurrentUser = { id: string; role: "ADMIN" | "EMPLOYEE" }
+type CurrentUser = { id: string; role: "ADMIN" | "USER" }
 
 export default function CreateTaskDialog({
   open,

@@ -32,7 +32,7 @@ type TaskWithRelations = {
   comments: CommentWithUser[]
 }
 
-type CurrentUser = { id: string; role: "ADMIN" | "EMPLOYEE" }
+type CurrentUser = { id: string; role: "ADMIN" | "USER" }
 
 function formatDueDate(value: string | Date) {
   const d = value instanceof Date ? value : new Date(value)

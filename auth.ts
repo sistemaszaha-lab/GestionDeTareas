@@ -79,26 +79,26 @@ export const authOptions: NextAuthOptions = {
 
           if (!identifier || !password) return null
 
-          // Si llega un email, intentamos mapearlo a username tomando la parte antes del '@'.
-          const usernameCandidate = identifier.includes("@") ? identifier.split("@")[0] : identifier
-
           const user = await prisma.user.findFirst({
             where: {
-              username: { equals: usernameCandidate, mode: "insensitive" }
+              OR: [
+                { username: { equals: identifier, mode: "insensitive" } },
+                { email: { equals: identifier, mode: "insensitive" } }
+              ]
             }
           })
 
           if (!user) {
-            if (debugEnabled) console.log("[auth] authorize: user not found", { usernameCandidate })
+            if (debugEnabled) console.log("[auth] authorize: user not found", { identifier })
             return null
           }
 
-          if (!user.passwordHash) {
-            console.warn("[auth] authorize: user has no passwordHash", { userId: user.id })
+          if (!user.password) {
+            console.warn("[auth] authorize: user has no password", { userId: user.id })
             return null
           }
 
-          const ok = await bcrypt.compare(password, user.passwordHash)
+          const ok = await bcrypt.compare(password, user.password)
           if (!ok) {
             if (debugEnabled) console.log("[auth] authorize: invalid password", { userId: user.id })
             return null
@@ -107,7 +107,8 @@ export const authOptions: NextAuthOptions = {
           return {
             id: user.id,
             name: user.name,
-            email: identifier.includes("@") ? identifier : `${user.username}@local`,
+            email: user.email ?? (identifier.includes("@") ? identifier : `${user.username}@local`),
+            username: user.username,
             role: user.role
           } as any
         } catch (err) {

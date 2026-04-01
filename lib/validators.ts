@@ -1,4 +1,4 @@
-ï»¿import { z } from "zod"
+import { z } from "zod"
 
 function isValidIsoDate(input: string) {
   const d = new Date(`${input}T00:00:00.000Z`)
@@ -9,7 +9,7 @@ function isValidIsoDate(input: string) {
 const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .refine(isValidIsoDate, "Fecha invÃ¡lida")
+  .refine(isValidIsoDate, "Fecha inválida")
 
 export const loginSchema = z.object({
   username: z.string().trim().min(1).max(64),
@@ -37,3 +37,30 @@ export const createCommentSchema = z.object({
   taskId: z.string().trim().min(1),
   content: z.string().trim().min(1).max(2000)
 })
+
+export const createUserSchema = z
+  .object({
+    firstName: z.string().trim().min(1).max(80),
+    middleName: z.string().trim().max(80).optional().nullable(),
+    lastName: z.string().trim().min(1).max(80),
+    email: z.string().trim().email().max(254),
+    phone: z.string().trim().min(7).max(32),
+    username: z
+      .string()
+      .trim()
+      .min(3)
+      .max(64)
+      .regex(/^[a-zA-Z0-9._-]+$/, "Username inválido"),
+    password: z.string().min(8).max(200),
+    confirmPassword: z.string().min(8).max(200),
+    role: z.enum(["admin", "user", "ADMIN", "USER"]).optional()
+  })
+  .superRefine((data, ctx) => {
+    if (data.password !== data.confirmPassword) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["confirmPassword"],
+        message: "Las contraseñas no coinciden"
+      })
+    }
+  })

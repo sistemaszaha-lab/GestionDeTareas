@@ -1,4 +1,4 @@
-ï»¿"use client"
+"use client"
 
 import type { SVGProps } from "react"
 import { useEffect, useState } from "react"
@@ -62,7 +62,7 @@ export default function Topbar({ user, onOpenMenu }: { user: SessionUser; onOpen
   async function logout() {
     setLoading(true)
     try {
-      await fetchJsonOrThrow<{ ok: true }>("/api/auth/logout", { method: "POST" }, { defaultError: "No se pudo cerrar sesiÃ³n", logTag: "POST /api/auth/logout" })
+      await fetchJsonOrThrow<{ ok: true }>("/api/auth/logout", { method: "POST" }, { defaultError: "No se pudo cerrar sesión", logTag: "POST /api/auth/logout" })
       await signOut({ redirect: false })
       router.replace("/login")
       router.refresh()
@@ -81,7 +81,7 @@ export default function Topbar({ user, onOpenMenu }: { user: SessionUser; onOpen
         <div className="flex min-h-14 items-center justify-between gap-3 px-4 md:px-6">
           <div className="flex min-w-0 items-center gap-2">
             {onOpenMenu ? (
-              <Button variant="ghost" className="h-10 w-10 px-0 md:hidden" onClick={onOpenMenu} aria-label="Abrir menÃº">
+              <Button variant="ghost" className="h-10 w-10 px-0 md:hidden" onClick={onOpenMenu} aria-label="Abrir menú">
                 <HamburgerIcon className="h-5 w-5" />
               </Button>
             ) : null}
@@ -90,7 +90,7 @@ export default function Topbar({ user, onOpenMenu }: { user: SessionUser; onOpen
 
           <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
             <Badge variant="outline" className="hidden shrink-0 sm:inline-flex">
-              {user.role === "ADMIN" ? "Administrador" : "Empleado"}
+              {user.role === "ADMIN" ? "Administrador" : "Usuario"}
             </Badge>
 
             <div className="hidden min-w-0 text-sm text-slate-900 dark:text-slate-50 md:block">
@@ -112,7 +112,7 @@ export default function Topbar({ user, onOpenMenu }: { user: SessionUser; onOpen
             )}
 
             <Button variant="outline" onClick={logout} disabled={loading} className="h-10 px-3">
-              {loading ? "Saliendoâ€¦" : "Salir"}
+              {loading ? "Saliendo…" : "Salir"}
             </Button>
           </div>
         </div>

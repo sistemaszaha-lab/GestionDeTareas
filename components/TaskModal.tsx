@@ -40,7 +40,7 @@ type TaskWithRelations = {
   comments: CommentWithUser[]
 }
 
-type CurrentUser = { id: string; role: "ADMIN" | "EMPLOYEE" }
+type CurrentUser = { id: string; role: "ADMIN" | "USER" }
 
 function toInputDate(value: string | Date | null | undefined) {
   if (!value) return ""

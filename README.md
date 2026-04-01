@@ -50,4 +50,4 @@ Abre `http://localhost:3000`.
 - No hay registro público: crea usuarios en la DB (o usa `prisma:seed`).
 - Roles:
   - `ADMIN`: crear/editar/eliminar tareas, reasignar.
-  - `EMPLOYEE`: ver tareas, mover estado si está asignado, comentar.
+  - `USER`: ver tareas, mover estado si está asignado, comentar.

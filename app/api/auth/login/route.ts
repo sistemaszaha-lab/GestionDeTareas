@@ -25,13 +25,19 @@ export async function POST(req: Request) {
 
     const parsed = loginSchema.safeParse(body)
     if (!parsed.success) return jsonError("Datos inválidos", 400)
+    const identifier = parsed.data.username.trim().toLowerCase()
 
-    const username = parsed.data.username.trim().toLowerCase()
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: { equals: identifier, mode: "insensitive" } },
+          { email: { equals: identifier, mode: "insensitive" } }
+        ]
+      }
+    })
+    if (!user?.password) return jsonError("Credenciales inválidas", 401)
 
-    const user = await prisma.user.findUnique({ where: { username } })
-    if (!user?.passwordHash) return jsonError("Credenciales inválidas", 401)
-
-    const ok = await verifyPassword(parsed.data.password, user.passwordHash)
+    const ok = await verifyPassword(parsed.data.password, user.password)
     if (!ok) return jsonError("Credenciales inválidas", 401)
 
     const token = await signAuthToken({

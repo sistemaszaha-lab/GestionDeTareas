@@ -1,31 +1,39 @@
-﻿import { PrismaClient, UserRole } from "@prisma/client"
+import { PrismaClient, UserRole } from "@prisma/client"
 import { hashPassword } from "../lib/password"
 
 const prisma = new PrismaClient()
 
 async function main() {
-  const email = "sistemaszaha@gmail.com"
-  const username = "admin"
-  const password = "123456789"
+  const email = process.env.SEED_ADMIN_EMAIL ?? "sistemaszaha@gmail.com"
+  const username = process.env.SEED_ADMIN_USERNAME ?? "admin"
+  const password = process.env.SEED_ADMIN_PASSWORD ?? "123456789"
 
-  console.log("[seed] Starting…")
+  console.log("[seed] Starting�")
   console.log("[seed] Admin user:", { email, username, role: "ADMIN" })
 
   const passwordHash = await hashPassword(password)
 
-  // NOTE: The current Prisma `User` model in `prisma/schema.prisma` does not have an `email` field.
-  // We still log the email above for clarity; `username` remains the login identifier.
   const admin = await prisma.user.upsert({
     where: { username },
     update: {
-      name: email,
+      name: "Admin",
+      firstName: "Admin",
+      middleName: null,
+      lastName: "Sistema",
+      email,
+      phone: "0000000000",
       role: UserRole.ADMIN,
-      passwordHash
+      password: passwordHash
     },
     create: {
-      name: email,
+      name: "Admin",
+      firstName: "Admin",
+      middleName: null,
+      lastName: "Sistema",
+      email,
+      phone: "0000000000",
       username,
-      passwordHash,
+      password: passwordHash,
       role: UserRole.ADMIN
     },
     select: { id: true, username: true, name: true, role: true, createdAt: true }
@@ -43,4 +51,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect()
   })
-
