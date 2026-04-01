@@ -14,7 +14,7 @@ export function SidebarContent({ user, onNavigate }: { user: SessionUser; onNavi
               <CardDescription className="mt-1">Organiza y da seguimiento a tu trabajo.</CardDescription>
             </div>
             <Badge variant={user.role === "ADMIN" ? ("default" as any) : ("secondary" as any)}>
-              {user.role === "ADMIN" ? "Admin" : "Empleado"}
+              {user.role === "ADMIN" ? "Admin" : "User"}
             </Badge>
           </div>
         </CardHeader>
@@ -35,6 +35,15 @@ export function SidebarContent({ user, onNavigate }: { user: SessionUser; onNavi
             >
               Mis tareas
             </Link>
+            {user.role === "ADMIN" ? (
+              <Link
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:bg-slate-900/60 hover:text-slate-900 dark:text-slate-50 md:py-2"
+                href="/dashboard/usuarios"
+                onClick={onNavigate}
+              >
+                Usuarios
+              </Link>
+            ) : null}
           </nav>
         </CardContent>
 

@@ -24,6 +24,33 @@ function buildDisplayName(input: { firstName: string; middleName?: string | null
   return [input.firstName.trim(), mid ? mid : null, input.lastName.trim()].filter(Boolean).join(" ")
 }
 
+export async function GET(req: Request) {
+  try {
+    const currentUser = await requireSession(req)
+    if (!currentUser) return jsonError("Unauthorized", 401)
+    if (currentUser.role !== "ADMIN") return jsonError("Forbidden", 403)
+
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        username: true,
+        role: true,
+        createdAt: true
+      }
+    })
+
+    return jsonOk({ users })
+  } catch (err) {
+    return prismaErrorResponse(err) ?? jsonException(err, { route: "GET /api/users" })
+  }
+}
 export async function POST(req: Request) {
   try {
     const currentUser = await requireSession(req)

@@ -8,7 +8,7 @@ async function main() {
   const username = process.env.SEED_ADMIN_USERNAME ?? "admin"
   const password = process.env.SEED_ADMIN_PASSWORD ?? "123456789"
 
-  console.log("[seed] Starting…")
+  console.log("[seed] Startingâ€¦")
   console.log("[seed] Admin user:", { email, username, role: "ADMIN" })
 
   const passwordHash = await hashPassword(password)
