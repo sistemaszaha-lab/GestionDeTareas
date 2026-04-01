@@ -261,7 +261,7 @@ export default function CreateUserDialog({
                   </Button>
                 </DialogClose>
                 <Button type="submit" disabled={disableSubmit}>
-                  {saving ? "Creando…" : "Crear usuario"}
+                  {saving ? "Creandoâ€¦" : "Crear usuario"}
                 </Button>
               </DialogFooter>
             </form>

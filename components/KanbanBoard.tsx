@@ -299,7 +299,7 @@ export default function KanbanBoard({
 
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                 <Button variant="outline" onClick={refresh} disabled={refreshing} className="w-full sm:flex-1">
-                  {refreshing ? "Refrescando…" : "Refrescar"}
+                  {refreshing ? "Refrescandoâ€¦" : "Refrescar"}
                 </Button>
                 {currentUser.role === "ADMIN" ? (
                   <>
@@ -329,7 +329,7 @@ export default function KanbanBoard({
         <Card>
           <CardContent className="p-10 text-center">
             <div className="text-sm font-medium text-slate-900 dark:text-slate-50">No hay tareas</div>
-            <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">Cuando se creen, aparecerán aquí agrupadas por estado.</div>
+            <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">Cuando se creen, aparecerÃ¡n aquÃ­ agrupadas por estado.</div>
           </CardContent>
         </Card>
       ) : null}

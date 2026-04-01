@@ -9,7 +9,7 @@ function isValidIsoDate(input: string) {
 const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .refine(isValidIsoDate, "Fecha inv·lida")
+  .refine(isValidIsoDate, "Fecha inv√°lida")
 
 export const loginSchema = z.object({
   username: z.string().trim().min(1).max(64),
@@ -50,7 +50,7 @@ export const createUserSchema = z
       .trim()
       .min(3)
       .max(64)
-      .regex(/^[a-zA-Z0-9._-]+$/, "Username inv·lido"),
+      .regex(/^[a-zA-Z0-9._-]+$/, "Username inv√°lido"),
     password: z.string().min(8).max(200),
     confirmPassword: z.string().min(8).max(200),
     role: z.enum(["admin", "user", "ADMIN", "USER"]).optional()
@@ -60,7 +60,7 @@ export const createUserSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["confirmPassword"],
-        message: "Las contraseÒas no coinciden"
+        message: "Las contrase√±as no coinciden"
       })
     }
   })
