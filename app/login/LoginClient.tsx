@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState, type FormEvent } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -9,6 +9,17 @@ import { Button } from "@/components/shadcn/ui/button"
 import { Input } from "@/components/shadcn/ui/input"
 import { Label } from "@/components/shadcn/ui/label"
 import { fetchJsonOrThrow } from "@/lib/fetch-json"
+
+function GoogleIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5">
+      <path fill="#4285F4" d="M22.66 12.23c0-.74-.07-1.45-.21-2.14H12v4.06h5.74c-.25 1.35-1.02 2.49-2.17 3.25v2.7h3.52c2.07-1.9 3.27-4.71 3.27-8.87Z" />
+      <path fill="#34A853" d="M12 23c2.94 0 5.41-.97 7.21-2.63l-3.52-2.7c-.98.66-2.24 1.05-3.69 1.05-2.84 0-5.25-1.92-6.11-4.51H2.25v2.82C3.98 20.96 7.72 23 12 23Z" />
+      <path fill="#FBBC05" d="M5.89 14.21a7.38 7.38 0 0 1 0-4.42V7.0H2.25a11.99 11.99 0 0 0 0 10.0l3.64-2.79Z" />
+      <path fill="#EA4335" d="M12 4.76c1.6 0 3.04.55 4.17 1.64l3.12-3.12C17.38 1.21 14.94 0 12 0 7.72 0 3.98 2.04 2.25 5.82l3.64 2.82C6.75 6.68 9.16 4.76 12 4.76Z" />
+    </svg>
+  )
+}
 
 export default function LoginClient({
   googleEnabled,
@@ -136,11 +147,17 @@ export default function LoginClient({
                 </div>
               </div>
 
-              <Button variant="outline" className="w-full" onClick={onGoogle} disabled={googleLoading || loading}>
-                {googleLoading ? "Conectando..." : "Continuar con Google"}
-              </Button>
-            </>
-          ) : null}
+              <Button
+            variant="outline"
+            className="w-full flex items-center justify-center gap-2"
+            onClick={onGoogle}
+            disabled={googleLoading || loading}
+          >
+            <GoogleIcon />
+            {googleLoading ? "Conectando..." : "Continuar con Google"}
+          </Button>
+        </>
+      ) : null}
         </CardContent>
       </Card>
     </main>

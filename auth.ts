@@ -87,9 +87,6 @@ export const authOptions: NextAuthOptions = {
         const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : ""
 
         if (!email) return "/login?error=google_no_email"
-        if (!email.endsWith("@comerciointeligentebc.com")) {
-          throw new Error("Acceso no autorizado")
-        }
         if (!isAllowedCompanyEmail(email)) return "/login?error=invalid_domain"
 
         const emailVerified = (profile as any)?.email_verified
