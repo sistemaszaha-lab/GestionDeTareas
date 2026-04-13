@@ -148,16 +148,16 @@ export default function LoginClient({
               </div>
 
               <Button
-            variant="outline"
-            className="w-full flex items-center justify-center gap-2"
-            onClick={onGoogle}
-            disabled={googleLoading || loading}
-          >
-            <GoogleIcon />
-            {googleLoading ? "Conectando..." : "Continuar con Google"}
-          </Button>
-        </>
-      ) : null}
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2"
+                onClick={onGoogle}
+                disabled={googleLoading || loading}
+              >
+                <GoogleIcon />
+                {googleLoading ? "Conectando..." : "Continuar con Google"}
+              </Button>
+            </>
+          ) : null}
         </CardContent>
       </Card>
     </main>
