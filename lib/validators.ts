@@ -64,3 +64,61 @@ export const createUserSchema = z
       })
     }
   })
+
+export const updateUserSchema = z
+  .object({
+    firstName: z.string().trim().min(1).max(80).optional(),
+    middleName: z.string().trim().max(80).optional().nullable(),
+    lastName: z.string().trim().min(1).max(80).optional(),
+    email: z.string().trim().email().max(254).optional(),
+    phone: z.string().trim().min(7).max(32).optional(),
+    username: z
+      .string()
+      .trim()
+      .min(3)
+      .max(64)
+      .regex(/^[a-zA-Z0-9._-]+$/, "Username inválido")
+      .optional(),
+    password: z.string().min(8).max(200).optional(),
+    confirmPassword: z.string().min(8).max(200).optional(),
+    role: z.enum(["admin", "user", "ADMIN", "USER"]).optional()
+  })
+  .superRefine((data, ctx) => {
+    const hasPassword = typeof data.password === "string" && data.password.length > 0
+    const hasConfirm = typeof data.confirmPassword === "string" && data.confirmPassword.length > 0
+
+    if (hasPassword !== hasConfirm) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["confirmPassword"],
+        message: "Confirma la contraseña"
+      })
+      return
+    }
+
+    if (hasPassword && data.password !== data.confirmPassword) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["confirmPassword"],
+        message: "Las contraseñas no coinciden"
+      })
+    }
+
+    const hasAny =
+      data.firstName !== undefined ||
+      data.middleName !== undefined ||
+      data.lastName !== undefined ||
+      data.email !== undefined ||
+      data.phone !== undefined ||
+      data.username !== undefined ||
+      data.role !== undefined ||
+      hasPassword
+
+    if (!hasAny) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [],
+        message: "Sin cambios"
+      })
+    }
+  })

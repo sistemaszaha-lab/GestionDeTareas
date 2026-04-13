@@ -1,4 +1,4 @@
-﻿import { Suspense } from "react"
+import { Suspense } from "react"
 import LoginClient from "./LoginClient"
 
 function LoginFallback() {
@@ -17,9 +17,11 @@ function LoginFallback() {
 }
 
 export default function LoginPage() {
+  const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
+  const allowedGoogleDomain = (process.env.ALLOWED_GOOGLE_DOMAIN ?? "comerciointeligentebc.com").trim().toLowerCase().replace(/^@/, "")
   return (
     <Suspense fallback={<LoginFallback />}>
-      <LoginClient />
+      <LoginClient googleEnabled={googleEnabled} allowedGoogleDomain={allowedGoogleDomain} />
     </Suspense>
   )
 }

@@ -20,11 +20,21 @@ AUTH_SECRET="cambia-esto-por-un-secreto-largo"
 
 # Opcional (recomendado en producción)
 NEXTAUTH_URL="http://localhost:3000"
+
+# Login con Google (opcional)
+GOOGLE_CLIENT_ID="..."
+GOOGLE_CLIENT_SECRET="..."
+# Restringe el acceso por dominio corporativo
+ALLOWED_GOOGLE_DOMAIN="comerciointeligentebc.com"
 ```
 
 Notas:
 - `JWT_SECRET` es el secreto del login por username/contraseña (cookie `auth_token`).
 - `AUTH_SECRET` es el secreto usado por `next-auth/jwt` y la ruta `/api/auth/[...nextauth]`.
+
+Login con Google:
+- Solo se permite el dominio configurado en `ALLOWED_GOOGLE_DOMAIN` (por defecto `comerciointeligentebc.com`).
+- Si un usuario inicia sesion por primera vez con Google y el dominio es valido, se crea automaticamente en la base de datos.
 
 Opcional para seed:
 

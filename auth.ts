@@ -1,15 +1,61 @@
 import type { NextAuthOptions } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
+import GoogleProvider from "next-auth/providers/google"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 
 const authSecret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
 const debugEnabled = process.env.NEXTAUTH_DEBUG === "true"
+const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
+const allowedGoogleDomain = (process.env.ALLOWED_GOOGLE_DOMAIN ?? "comerciointeligentebc.com")
+  .trim()
+  .toLowerCase()
+  .replace(/^@/, "")
+
+function isAllowedCompanyEmail(email: string) {
+  const e = email.trim().toLowerCase()
+  return e.endsWith(`@${allowedGoogleDomain}`)
+}
+
+function sanitizeUsernameBase(input: string) {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "")
+    .replace(/^[._-]+|[._-]+$/g, "")
+    .slice(0, 64)
+}
+
+async function ensureUniqueUsername(baseInput: string) {
+  const base = sanitizeUsernameBase(baseInput) || `user-${Math.random().toString(16).slice(2, 8)}`
+  for (let i = 0; i < 50; i++) {
+    const candidate = i === 0 ? base : `${base}-${i + 1}`
+    const exists = await prisma.user.findFirst({
+      where: { username: { equals: candidate, mode: "insensitive" } },
+      select: { id: true }
+    })
+    if (!exists) return candidate
+  }
+  return `${base}-${Date.now().toString(16)}`.slice(0, 64)
+}
+
+function splitName(full: string | null | undefined) {
+  const raw = (full ?? "").trim().replace(/\s+/g, " ")
+  if (!raw) return { firstName: "Usuario", middleName: null as string | null, lastName: "Google" }
+  const parts = raw.split(" ").filter(Boolean)
+  const firstName = parts[0] ?? "Usuario"
+  const lastName = parts.length > 1 ? parts[parts.length - 1] : "Google"
+  const middle = parts.length > 2 ? parts.slice(1, -1).join(" ") : ""
+  return { firstName, middleName: middle ? middle : null, lastName }
+}
 
 if (process.env.NODE_ENV === "production") {
   if (!process.env.DATABASE_URL) console.warn("[auth] Missing DATABASE_URL (required)")
   if (!authSecret) console.warn("[auth] Missing AUTH_SECRET/NEXTAUTH_SECRET (required)")
   if (!process.env.NEXTAUTH_URL) console.warn("[auth] Missing NEXTAUTH_URL (required for stable cookies/redirects in production)")
+  if (!process.env.GOOGLE_CLIENT_ID) console.warn("[auth] Missing GOOGLE_CLIENT_ID (required for Google login)")
+  if (!process.env.GOOGLE_CLIENT_SECRET) console.warn("[auth] Missing GOOGLE_CLIENT_SECRET (required for Google login)")
+  if (!process.env.ALLOWED_GOOGLE_DOMAIN) console.warn("[auth] Missing ALLOWED_GOOGLE_DOMAIN (recommended)")
 }
 
 export const authOptions: NextAuthOptions = {
@@ -17,7 +63,8 @@ export const authOptions: NextAuthOptions = {
   useSecureCookies: process.env.NODE_ENV === "production",
   debug: debugEnabled,
   pages: {
-    signIn: "/login"
+    signIn: "/login",
+    error: "/login"
   },
   session: {
     strategy: "jwt"
@@ -34,15 +81,86 @@ export const authOptions: NextAuthOptions = {
     }
   },
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "google") {
+        const rawEmail = (profile as any)?.email ?? (user as any)?.email
+        const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : ""
+
+        if (!email) return "/login?error=google_no_email"
+        if (!email.endsWith("@comerciointeligentebc.com")) {
+          throw new Error("Acceso no autorizado")
+        }
+        if (!isAllowedCompanyEmail(email)) return "/login?error=invalid_domain"
+
+        const emailVerified = (profile as any)?.email_verified
+        if (emailVerified === false) return "/login?error=google_unverified"
+
+        const nameFromProfile = typeof (profile as any)?.name === "string" ? (profile as any).name : (user as any)?.name
+        const { firstName, middleName, lastName } = splitName(nameFromProfile)
+        const usernameBase = email.includes("@") ? email.split("@")[0] : email
+
+        const existing = await prisma.user.findUnique({ where: { email }, select: { id: true, username: true, role: true } })
+        const username = existing?.username ?? (await ensureUniqueUsername(usernameBase))
+
+        const dbUser = await prisma.user.upsert({
+          where: { email },
+          update: {
+            name: `${firstName}${middleName ? ` ${middleName}` : ""} ${lastName}`.trim(),
+            firstName,
+            middleName,
+            lastName,
+            username,
+            image: typeof (profile as any)?.picture === "string" ? (profile as any).picture : (user as any)?.image ?? null
+          },
+          create: {
+            name: `${firstName}${middleName ? ` ${middleName}` : ""} ${lastName}`.trim(),
+            firstName,
+            middleName,
+            lastName,
+            email,
+            phone: "",
+            username,
+            password: null,
+            role: "USER"
+          },
+          select: { id: true, email: true, name: true, username: true, role: true }
+        })
+
+        ;(user as any).id = dbUser.id
+        ;(user as any).email = dbUser.email
+        ;(user as any).name = dbUser.name
+        ;(user as any).username = dbUser.username
+        ;(user as any).role = dbUser.role
+
+        return true
+      }
+
       return Boolean((user as any)?.id)
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account, profile }) {
       if (user) {
         token.sub = (user as any).id
         ;(token as unknown as { role?: unknown }).role = (user as any).role
         ;(token as unknown as { username?: unknown }).username = (user as any).username
         ;(token as unknown as { email?: unknown }).email = (user as any).email
+      }
+
+      // Ensure tokens created by OAuth have our DB user id/role/username.
+      if (account?.provider === "google") {
+        const rawEmail = (profile as any)?.email ?? (token as any)?.email
+        const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : ""
+        if (email) {
+          const dbUser = await prisma.user.findUnique({
+            where: { email },
+            select: { id: true, email: true, username: true, role: true }
+          })
+          if (dbUser) {
+            token.sub = dbUser.id
+            ;(token as any).email = dbUser.email
+            ;(token as any).username = dbUser.username
+            ;(token as any).role = dbUser.role
+          }
+        }
       }
       return token
     },
@@ -57,6 +175,16 @@ export const authOptions: NextAuthOptions = {
     }
   },
   providers: [
+    ...(googleEnabled
+      ? [
+          GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+            // UX hint for Google; domain is still validated in `callbacks.signIn`.
+            authorization: { params: { hd: allowedGoogleDomain } }
+          })
+        ]
+      : []),
     Credentials({
       name: "Credentials",
       credentials: {
