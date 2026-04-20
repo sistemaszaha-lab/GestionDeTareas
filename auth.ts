@@ -8,6 +8,7 @@ const authSecret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
 const debugEnabled = process.env.NEXTAUTH_DEBUG === "true"
 const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
 const allowedGoogleDomain = "comerciointeligentebc.com"
+const allowedGoogleEmailDomain = "@comerciointeligentebc.com"
 
 function isAllowedCompanyEmail(email: string) {
   const e = email.trim().toLowerCase()
@@ -79,51 +80,33 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account, profile }) {
       if (account?.provider === "google") {
-        const rawEmail = (profile as any)?.email ?? (user as any)?.email
-        const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : ""
+        const rawEmail = (user as any)?.email ?? (profile as any)?.email
+        const email = typeof rawEmail === "string" ? rawEmail.toLowerCase().trim() : ""
+        console.log("[auth] Google email recibido:", email || null)
 
-        if (!email) return "/login?error=google_no_email"
-        if (!isAllowedCompanyEmail(email)) return "/login?error=invalid_domain"
+        if (!email || !email.endsWith(allowedGoogleEmailDomain)) {
+          console.log("Acceso denegado:", email || null)
+          return "/login?error=unauthorized"
+        }
 
         const emailVerified = (profile as any)?.email_verified
         if (emailVerified === false) return "/login?error=google_unverified"
 
-        const nameFromProfile = typeof (profile as any)?.name === "string" ? (profile as any).name : (user as any)?.name
-        const { firstName, middleName, lastName } = splitName(nameFromProfile)
-        const usernameBase = email.includes("@") ? email.split("@")[0] : email
-
-        const existing = await prisma.user.findUnique({ where: { email }, select: { id: true, username: true, role: true } })
-        const username = existing?.username ?? (await ensureUniqueUsername(usernameBase))
-
-        const dbUser = await prisma.user.upsert({
+        const existing = await prisma.user.findUnique({
           where: { email },
-          update: {
-            name: `${firstName}${middleName ? ` ${middleName}` : ""} ${lastName}`.trim(),
-            firstName,
-            middleName,
-            lastName,
-            username,
-            image: typeof (profile as any)?.picture === "string" ? (profile as any).picture : (user as any)?.image ?? null
-          },
-          create: {
-            name: `${firstName}${middleName ? ` ${middleName}` : ""} ${lastName}`.trim(),
-            firstName,
-            middleName,
-            lastName,
-            email,
-            phone: "",
-            username,
-            password: null,
-            role: "USER"
-          },
           select: { id: true, email: true, name: true, username: true, role: true }
         })
 
-        ;(user as any).id = dbUser.id
-        ;(user as any).email = dbUser.email
-        ;(user as any).name = dbUser.name
-        ;(user as any).username = dbUser.username
-        ;(user as any).role = dbUser.role
+        if (!existing) {
+          // Usuario nuevo (Google): completar perfil antes de crear en DB.
+          return "/complete-profile"
+        }
+
+        ;(user as any).id = existing.id
+        ;(user as any).email = existing.email
+        ;(user as any).name = existing.name
+        ;(user as any).username = existing.username
+        ;(user as any).role = existing.role
 
         return true
       }
@@ -140,29 +123,40 @@ export const authOptions: NextAuthOptions = {
 
       // Ensure tokens created by OAuth have our DB user id/role/username.
       if (account?.provider === "google") {
-        const rawEmail = (profile as any)?.email ?? (token as any)?.email
+        const rawEmail = (profile as any)?.email ?? (user as any)?.email ?? (token as any)?.email
         const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : ""
-        if (email) {
-          const dbUser = await prisma.user.findUnique({
-            where: { email },
-            select: { id: true, email: true, username: true, role: true }
-          })
-          if (dbUser) {
-            token.sub = dbUser.id
-            ;(token as any).email = dbUser.email
-            ;(token as any).username = dbUser.username
-            ;(token as any).role = dbUser.role
-          }
+        ;(token as any).email = email || undefined
+        ;(token as any).name =
+          typeof (profile as any)?.name === "string" ? (profile as any).name : typeof (user as any)?.name === "string" ? (user as any).name : (token as any).name
+
+        const dbUser = email
+          ? await prisma.user.findUnique({
+              where: { email },
+              select: { id: true, email: true, username: true, role: true }
+            })
+          : null
+
+        if (dbUser) {
+          token.sub = dbUser.id
+          ;(token as any).email = dbUser.email
+          ;(token as any).username = dbUser.username
+          ;(token as any).role = dbUser.role
+          ;(token as any).needsProfileCompletion = false
+        } else {
+          ;(token as any).needsProfileCompletion = true
         }
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
-        ;(session.user as any).id = token.sub
+        if (!(token as any).needsProfileCompletion) {
+          ;(session.user as any).id = token.sub
+        }
         ;(session.user as any).role = (token as any).role
         ;(session.user as any).username = (token as any).username
         ;(session.user as any).email = (token as any).email
+        ;(session.user as any).needsProfileCompletion = Boolean((token as any).needsProfileCompletion)
       }
       return session
     }

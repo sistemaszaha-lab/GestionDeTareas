@@ -4,12 +4,13 @@ import { getToken } from "next-auth/jwt"
 import { AUTH_COOKIE_NAME, verifyAuthToken } from "@/lib/auth"
 
 const PUBLIC_PATHS = ["/login"]
+const PUBLIC_EXTRA_PATHS = ["/complete-profile"]
 const PUBLIC_API_PREFIXES = ["/api/auth"]
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  const isPublicPath = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+  const isPublicPath = [...PUBLIC_PATHS, ...PUBLIC_EXTRA_PATHS].some((p) => pathname === p || pathname.startsWith(`${p}/`))
   const isPublicApi = PUBLIC_API_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))
 
   if (isPublicPath || isPublicApi) return NextResponse.next()
@@ -21,7 +22,15 @@ export async function middleware(req: NextRequest) {
     req,
     secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
   }).catch(() => null)
-  if (nextAuthToken) return NextResponse.next()
+  if (nextAuthToken) {
+    const needsProfileCompletion = (nextAuthToken as any)?.needsProfileCompletion === true
+    if (needsProfileCompletion && !pathname.startsWith("/complete-profile")) {
+      const url = req.nextUrl.clone()
+      url.pathname = "/complete-profile"
+      return NextResponse.redirect(url)
+    }
+    return NextResponse.next()
+  }
 
   const token = req.cookies.get(AUTH_COOKIE_NAME)?.value
   if (!token) return deny(req)
