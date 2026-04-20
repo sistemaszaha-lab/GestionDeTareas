@@ -7,10 +7,7 @@ import { prisma } from "@/lib/prisma"
 const authSecret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
 const debugEnabled = process.env.NEXTAUTH_DEBUG === "true"
 const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
-const allowedGoogleDomain = (process.env.ALLOWED_GOOGLE_DOMAIN ?? "comerciointeligentebc.com")
-  .trim()
-  .toLowerCase()
-  .replace(/^@/, "")
+const allowedGoogleDomain = "tuempresa.com"
 
 function isAllowedCompanyEmail(email: string) {
   const e = email.trim().toLowerCase()
@@ -55,7 +52,6 @@ if (process.env.NODE_ENV === "production") {
   if (!process.env.NEXTAUTH_URL) console.warn("[auth] Missing NEXTAUTH_URL (required for stable cookies/redirects in production)")
   if (!process.env.GOOGLE_CLIENT_ID) console.warn("[auth] Missing GOOGLE_CLIENT_ID (required for Google login)")
   if (!process.env.GOOGLE_CLIENT_SECRET) console.warn("[auth] Missing GOOGLE_CLIENT_SECRET (required for Google login)")
-  if (!process.env.ALLOWED_GOOGLE_DOMAIN) console.warn("[auth] Missing ALLOWED_GOOGLE_DOMAIN (recommended)")
 }
 
 export const authOptions: NextAuthOptions = {
