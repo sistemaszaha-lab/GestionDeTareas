@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import toast from "react-hot-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/shadcn/ui/card"
 import { Button } from "@/components/shadcn/ui/button"
@@ -17,6 +18,7 @@ export default function CompleteProfileClient({
   defaultName: string
 }) {
   const router = useRouter()
+  const { update } = useSession()
 
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
@@ -56,8 +58,9 @@ export default function CompleteProfileClient({
         { defaultError: "No se pudo completar el registro", logTag: "POST /api/auth/complete-profile" }
       )
 
-      // Fuerza recalcular sesión/token tras crear el usuario en DB.
-      await fetch("/api/auth/session").catch(() => null)
+      // Actualizar la sesión para reflejar que el usuario completó su perfil
+      // Esto es importante para que isNewUser se establezca en false
+      await update()
 
       toast.success("Registro completado")
       router.replace("/dashboard")

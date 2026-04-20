@@ -98,9 +98,9 @@ export const authOptions: NextAuthOptions = {
         })
 
         if (!existing) {
-          // Usuario nuevo (Google): completar perfil antes de crear en DB.
+          // Usuario nuevo (Google): establecer flag para redirección en frontend
           ;(user as any).isNewUser = true
-          return "/complete-profile"
+          return true
         }
 
         ;(user as any).id = existing.id
