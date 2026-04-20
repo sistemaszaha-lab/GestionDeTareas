@@ -4,7 +4,7 @@ import type { SVGProps } from "react"
 import { useEffect, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
 import type { SessionUser } from "@/lib/session"
-import Sidebar, { SidebarContent } from "@/components/Sidebar"
+import { SidebarContent } from "@/components/Sidebar"
 import Topbar from "@/components/Topbar"
 import { Button } from "@/components/shadcn/ui/button"
 
@@ -19,6 +19,7 @@ function CloseIcon(props: SVGProps<SVGSVGElement>) {
 function DashboardShellInner({ user, children }: { user: SessionUser; children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
+  const mainScrollRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -32,22 +33,36 @@ function DashboardShellInner({ user, children }: { user: SessionUser; children: 
     document.addEventListener("keydown", onKeyDown)
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
+    const previousMainOverflow = mainScrollRef.current?.style.overflowY
+    if (mainScrollRef.current) mainScrollRef.current.style.overflowY = "hidden"
 
     return () => {
       document.removeEventListener("keydown", onKeyDown)
       document.body.style.overflow = previousOverflow
+      if (mainScrollRef.current) mainScrollRef.current.style.overflowY = previousMainOverflow ?? ""
     }
   }, [menuOpen])
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-7xl">
-      <Sidebar user={user} />
+    <div className="flex min-h-screen w-full">
+      <aside className="hidden w-72 shrink-0 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 md:sticky md:top-0 md:block md:h-screen md:overflow-y-auto">
+        <div className="p-4">
+          <SidebarContent user={user} />
+        </div>
+      </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar user={user} onOpenMenu={() => setMenuOpen(true)} />
-        <div className="p-4 md:p-6">
-          <div className="mx-auto w-full max-w-7xl">{children}</div>
-        </div>
+        <main
+          ref={(el) => {
+            mainScrollRef.current = el
+          }}
+          className="min-h-0 flex-1 overflow-y-auto"
+        >
+          <div className="p-4 md:p-6">
+            <div className="min-w-0 w-full">{children}</div>
+          </div>
+        </main>
       </div>
 
       {menuOpen ? (
@@ -77,5 +92,9 @@ function DashboardShellInner({ user, children }: { user: SessionUser; children: 
 
 export default function DashboardShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
   const pathname = usePathname()
-  return <DashboardShellInner key={pathname} user={user}>{children}</DashboardShellInner>
+  return (
+    <DashboardShellInner key={pathname} user={user}>
+      {children}
+    </DashboardShellInner>
+  )
 }

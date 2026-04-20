@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
-import type { TaskPriority, TaskStatus, UserRole } from "@prisma/client"
+import type { TaskPriority, TaskStatus } from "@prisma/client"
 import { Button } from "@/components/shadcn/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/shadcn/ui/card"
 import { Badge } from "@/components/shadcn/ui/badge"
@@ -13,31 +13,12 @@ import TaskCard from "@/components/TaskCard"
 import TaskModal from "@/components/TaskModal"
 import CreateTaskDialog from "@/components/CreateTaskDialog"
 import CreateUserDialog from "@/components/CreateUserDialog"
+import ViewSelector, { type TasksViewMode } from "@/components/tasks/ViewSelector"
+import TaskListView from "@/components/tasks/TaskListView"
+import TaskTableView from "@/components/tasks/TaskTableView"
+import TaskTimelineView from "@/components/tasks/TaskTimelineView"
+import type { CurrentUser, TaskWithRelations, UserLite } from "@/components/tasks/task-types"
 import { fetchJsonOrThrow } from "@/lib/fetch-json"
-
-type UserLite = { id: string; name: string; username: string; role: UserRole }
-
-type CommentWithUser = {
-  id: string
-  content: string
-  createdAt: string | Date
-  user: { id: string; name: string; username: string }
-}
-
-type TaskWithRelations = {
-  id: string
-  title: string
-  description: string | null
-  status: TaskStatus
-  priority: TaskPriority
-  assignedToId: string
-  dueDate: string | Date | null
-  createdAt: string | Date
-  assignedTo: UserLite
-  comments: CommentWithUser[]
-}
-
-type CurrentUser = { id: string; name: string; username: string; role: "ADMIN" | "USER" }
 
 const columns: Array<{ key: TaskStatus; title: string }> = [
   { key: "PENDING", title: "Pendiente" },
@@ -63,6 +44,7 @@ export default function KanbanBoard({
   const [filterUserId, setFilterUserId] = useState<string>(forceUserId ?? "all")
   const [filterStatus, setFilterStatus] = useState<TaskStatus | "all">("all")
   const [filterPriority, setFilterPriority] = useState<TaskPriority | "all">("all")
+  const [view, setView] = useState<TasksViewMode>("kanban")
   const [activeTask, setActiveTask] = useState<TaskWithRelations | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [createUserOpen, setCreateUserOpen] = useState(false)
@@ -101,6 +83,29 @@ export default function KanbanBoard({
     if (filterStatus === "all") return columns
     return columns.filter((c) => c.key === filterStatus)
   }, [filterStatus])
+
+  const viewStorageKey = useMemo(() => {
+    const scope = forceUserId ? "mine" : "all"
+    return `tasks:view:${scope}`
+  }, [forceUserId])
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(viewStorageKey) as TasksViewMode | null
+      if (saved === "kanban" || saved === "list" || saved === "table" || saved === "timeline") setView(saved)
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewStorageKey])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(viewStorageKey, view)
+    } catch {
+      // ignore
+    }
+  }, [view, viewStorageKey])
 
   async function refresh() {
     setRefreshing(true)
@@ -192,6 +197,7 @@ export default function KanbanBoard({
       priority: TaskPriority
       assignedToId: string
       dueDate: string | null
+      tags: string[]
     }>
   ) {
     const data = await fetchJsonOrThrow<{ task?: TaskWithRelations }>(
@@ -213,6 +219,7 @@ export default function KanbanBoard({
     assignedToId: string
     priority: TaskPriority
     dueDate: string | null
+    tags?: string[]
   }) {
     const data = await fetchJsonOrThrow<{ task?: TaskWithRelations }>(
       "/api/tasks",
@@ -258,6 +265,10 @@ export default function KanbanBoard({
             <Badge variant="outline">Completadas {doneCount}</Badge>
             <Badge variant={overdueCount ? "danger" : "outline"}>Vencidas {overdueCount}</Badge>
           </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <ViewSelector value={view} onChange={setView} />
         </div>
 
         <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40">
@@ -325,63 +336,67 @@ export default function KanbanBoard({
         </div>
       ) : null}
 
-      {!isInitialLoading && filteredTasks.length === 0 ? (
-        <Card>
-          <CardContent className="p-10 text-center">
-            <div className="text-sm font-medium text-slate-900 dark:text-slate-50">No hay tareas</div>
-            <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">Cuando se creen, aparecerán aquí agrupadas por estado.</div>
-          </CardContent>
-        </Card>
+      
+
+      {view === "kanban" ? (
+        <div
+          className={[
+            "-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain px-4 pb-2 touch-pan-x scroll-px-4",
+            "md:mx-0 md:snap-none md:px-0 md:pb-0 md:touch-auto md:scroll-px-0"
+          ].join(" ")}
+        >
+          {visibleColumns.map((col) => {
+            const colTasks = tasksByStatus(col.key)
+            return (
+              <Card key={col.key} className="overflow-hidden snap-start shrink-0 w-[85vw] sm:w-[22rem] md:w-[22rem] md:snap-none">
+                <CardHeader className="border-b border-slate-200 dark:border-slate-800 p-3 sm:p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <CardTitle className="text-base">{col.title}</CardTitle>
+                    <Badge variant="secondary">{colTasks.length}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-4">
+                  {isInitialLoading ? (
+                    <>
+                      <SkeletonTaskCard />
+                      <SkeletonTaskCard />
+                      <SkeletonTaskCard />
+                    </>
+                  ) : (
+                    <>
+                      {colTasks.map((t) => (
+                        <TaskCard
+                          key={t.id}
+                          task={t}
+                          currentUser={currentUser}
+                          users={users}
+                          onOpen={() => setActiveTask(t)}
+                          onQuickStatusChange={(status) => updateTask(t.id, { status })}
+                          onQuickAssigneeChange={(assignedToId) => updateTask(t.id, { assignedToId })}
+                          onAddComment={async (content) => addComment(t.id, content)}
+                        />
+                      ))}
+                      {colTasks.length === 0 ? (
+                        <div className="py-8 text-center text-xs text-slate-600 dark:text-slate-400">Sin tareas</div>
+                      ) : null}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
       ) : null}
 
-      <div
-        className={[
-          "-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 touch-pan-x scroll-px-4",
-          "md:mx-0 md:grid md:snap-none md:gap-4 md:overflow-visible md:px-0 md:pb-0 md:touch-auto md:scroll-px-0",
-          filterStatus === "all" ? "md:grid-cols-3" : "md:grid-cols-1"
-        ].join(" ")}
-      >
-        {visibleColumns.map((col) => {
-          const colTasks = tasksByStatus(col.key)
-          return (
-            <Card key={col.key} className="overflow-hidden snap-start shrink-0 w-[85vw] sm:w-[22rem] md:w-auto md:shrink md:snap-none">
-              <CardHeader className="border-b border-slate-200 dark:border-slate-800 p-3 sm:p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <CardTitle className="text-base">{col.title}</CardTitle>
-                  <Badge variant="secondary">{colTasks.length}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-4">
-                {isInitialLoading ? (
-                  <>
-                    <SkeletonTaskCard />
-                    <SkeletonTaskCard />
-                    <SkeletonTaskCard />
-                  </>
-                ) : (
-                  <>
-                    {colTasks.map((t) => (
-                      <TaskCard
-                        key={t.id}
-                        task={t}
-                        currentUser={currentUser}
-                        users={users}
-                        onOpen={() => setActiveTask(t)}
-                        onQuickStatusChange={(status) => updateTask(t.id, { status })}
-                        onQuickAssigneeChange={(assignedToId) => updateTask(t.id, { assignedToId })}
-                        onAddComment={async (content) => addComment(t.id, content)}
-                      />
-                    ))}
-                    {colTasks.length === 0 ? (
-                      <div className="py-8 text-center text-xs text-slate-600 dark:text-slate-400">Sin tareas</div>
-                    ) : null}
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+      {view === "list" ? (
+        <TaskListView tasks={filteredTasks} users={users} currentUser={currentUser} onCreate={createTask} onUpdate={updateTask} />
+      ) : null}
+
+      {view === "table" ? (
+        <TaskTableView tasks={filteredTasks} users={users} currentUser={currentUser} onUpdate={updateTask} />
+      ) : null}
+
+      {view === "timeline" ? <TaskTimelineView tasks={filteredTasks} /> : null}
 
       <CreateTaskDialog
         open={createOpen}
@@ -443,10 +458,3 @@ export default function KanbanBoard({
     </div>
   )
 }
-
-
-
-
-
-
-

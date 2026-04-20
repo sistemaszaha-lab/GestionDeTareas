@@ -93,6 +93,7 @@ model Task {
   priority     TaskPriority @default(MEDIUM)
   assignedToId String
   dueDate      DateTime?
+  tags         String[]   @default([])
   createdAt    DateTime   @default(now())
 
   assignedTo User      @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: Restrict)

@@ -82,6 +82,7 @@ export async function POST(req: Request) {
     if (!assignedUser) return jsonError("El usuario asignado no existe.", 400)
 
     const dueDate = parseDueDate(parsed.data.dueDate ?? null)
+    const tags = parsed.data.tags ?? []
 
     const task = await prisma.task.create({
       data: {
@@ -89,7 +90,8 @@ export async function POST(req: Request) {
         description: parsed.data.description ?? null,
         assignedToId: parsed.data.assignedToId,
         ...(parsed.data.priority ? { priority: parsed.data.priority as any } : {}),
-        ...(parsed.data.dueDate !== undefined ? { dueDate } : {})
+        ...(parsed.data.dueDate !== undefined ? { dueDate } : {}),
+        tags
       },
       include: {
         assignedTo: { select: { id: true, name: true, username: true, role: true } },

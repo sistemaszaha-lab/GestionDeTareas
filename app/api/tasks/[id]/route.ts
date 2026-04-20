@@ -36,7 +36,9 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       (typeof parsed.data.title === "string" && parsed.data.title !== existing.title) ||
       (typeof parsed.data.description !== "undefined" && parsed.data.description !== existing.description)
     const attemptedDueDateChange = typeof parsed.data.dueDate !== "undefined"
-    if (!canEditAll && (attemptedAssigneeChange || attemptedPriorityChange || attemptedTextChange || attemptedDueDateChange)) {
+    const attemptedTagsChange =
+      typeof parsed.data.tags !== "undefined" && JSON.stringify(parsed.data.tags ?? []) !== JSON.stringify((existing as any).tags ?? [])
+    if (!canEditAll && (attemptedAssigneeChange || attemptedPriorityChange || attemptedTextChange || attemptedDueDateChange || attemptedTagsChange)) {
       return jsonError("Solo admin puede editar título/descr., prioridad, vencimiento o reasignar", 403)
     }
 
@@ -51,7 +53,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
         ...(parsed.data.status ? { status: parsed.data.status as any } : {}),
         ...(parsed.data.priority ? { priority: parsed.data.priority as any } : {}),
         ...(parsed.data.assignedToId ? { assignedToId: parsed.data.assignedToId } : {}),
-        ...dueDatePatch
+        ...dueDatePatch,
+        ...(typeof parsed.data.tags !== "undefined" ? { tags: parsed.data.tags ?? [] } : {})
       },
       include: {
         assignedTo: { select: { id: true, name: true, username: true, role: true } },

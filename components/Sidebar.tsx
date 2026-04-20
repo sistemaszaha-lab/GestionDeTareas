@@ -5,7 +5,7 @@ import { Badge } from "@/components/shadcn/ui/badge"
 
 export function SidebarContent({ user, onNavigate }: { user: SessionUser; onNavigate?: () => void }) {
   return (
-    <div className="md:sticky md:top-4">
+    <div className="md:sticky md:top-0">
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between gap-3">
