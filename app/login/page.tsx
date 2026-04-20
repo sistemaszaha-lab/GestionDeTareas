@@ -11,7 +11,7 @@ import { Input } from "@/components/shadcn/ui/input"
 import { Label } from "@/components/shadcn/ui/label"
 import { fetchJsonOrThrow } from "@/lib/fetch-json"
 
-const ALLOWED_GOOGLE_DOMAIN = "tuempresa.com"
+const ALLOWED_GOOGLE_DOMAIN = "comerciointeligentebc.com"
 
 function GoogleIcon() {
   return (
@@ -60,10 +60,10 @@ function LoginInner() {
 
   const authErrorMessage = useMemo(() => {
     if (!authError) return null
-    if (authError === "invalid_domain") return `Solo se permiten correos @${ALLOWED_GOOGLE_DOMAIN}.`
+    if (authError === "invalid_domain") return "Acceso restringido a usuarios de la empresa"
     if (authError === "google_no_email") return "No pudimos leer tu correo desde Google. Intenta de nuevo."
     if (authError === "google_unverified") return "Tu correo de Google no está verificado."
-    if (authError === "AccessDenied") return `Acceso denegado. Solo se permiten correos @${ALLOWED_GOOGLE_DOMAIN}.`
+    if (authError === "AccessDenied") return "Acceso restringido a usuarios de la empresa"
     return "No se pudo iniciar sesión con Google. Intenta de nuevo."
   }, [authError])
 

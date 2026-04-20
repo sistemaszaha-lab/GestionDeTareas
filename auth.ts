@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma"
 const authSecret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
 const debugEnabled = process.env.NEXTAUTH_DEBUG === "true"
 const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
-const allowedGoogleDomain = "tuempresa.com"
+const allowedGoogleDomain = "comerciointeligentebc.com"
 
 function isAllowedCompanyEmail(email: string) {
   const e = email.trim().toLowerCase()

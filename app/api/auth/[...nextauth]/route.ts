@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-const ALLOWED_GOOGLE_DOMAIN = "tuempresa.com"
+const ALLOWED_GOOGLE_DOMAIN = "comerciointeligentebc.com"
 
 const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
 
