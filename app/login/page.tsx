@@ -149,7 +149,7 @@ function LoginInner() {
           <Button
             variant="outline"
             className="w-full flex items-center justify-center gap-2"
-            onClick={() => signIn("google")}
+            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
             disabled={loading}
           >
             <GoogleIcon />
