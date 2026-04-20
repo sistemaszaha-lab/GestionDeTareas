@@ -61,6 +61,7 @@ function LoginInner() {
   const authErrorMessage = useMemo(() => {
     if (!authError) return null
     if (authError === "invalid_domain") return "Acceso restringido a usuarios de la empresa"
+    if (authError === "unauthorized") return "Acceso restringido a usuarios de la empresa"
     if (authError === "google_no_email") return "No pudimos leer tu correo desde Google. Intenta de nuevo."
     if (authError === "google_unverified") return "Tu correo de Google no está verificado."
     if (authError === "AccessDenied") return "Acceso restringido a usuarios de la empresa"

@@ -68,28 +68,22 @@ const authOptions: NextAuthOptions = {
     ...baseAuthOptions.callbacks,
     async signIn({ user, account, profile }) {
       try {
-        if (account?.provider === "google") {
-          const emailRaw = (profile as any)?.email ?? (user as any)?.email
-          const email = typeof emailRaw === "string" ? emailRaw.trim().toLowerCase() : ""
+        if (account?.provider !== "google") return true
 
-          if (!email) {
-            console.warn("[nextauth] Google sign-in rejected: missing email")
-            return false
-          }
+        const email = (user as any)?.email ? String((user as any).email).toLowerCase().trim() : undefined
+        const allowedDomain = "@comerciointeligentebc.com"
 
-          if (!email.endsWith(`@${ALLOWED_GOOGLE_DOMAIN}`)) {
-            console.warn("[nextauth] Google sign-in rejected: invalid domain", {
-              email,
-              allowed: `@${ALLOWED_GOOGLE_DOMAIN}`
-            })
-            return false
-          }
+        console.log("[nextauth] Google email recibido:", email ?? null)
+
+        if (!email || !email.endsWith(allowedDomain)) {
+          console.log("Acceso denegado:", email ?? null)
+          return "/login?error=unauthorized"
         }
 
         return true
       } catch (err) {
         console.error("[nextauth] signIn callback failed", err)
-        return false
+        return "/login?error=unauthorized"
       }
     }
   }
