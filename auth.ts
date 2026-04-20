@@ -99,6 +99,7 @@ export const authOptions: NextAuthOptions = {
 
         if (!existing) {
           // Usuario nuevo (Google): completar perfil antes de crear en DB.
+          ;(user as any).isNewUser = true
           return "/complete-profile"
         }
 
@@ -108,6 +109,7 @@ export const authOptions: NextAuthOptions = {
         ;(user as any).username = existing.username
         ;(user as any).role = existing.role
 
+        ;(user as any).isNewUser = false
         return true
       }
 
@@ -119,6 +121,7 @@ export const authOptions: NextAuthOptions = {
         ;(token as unknown as { role?: unknown }).role = (user as any).role
         ;(token as unknown as { username?: unknown }).username = (user as any).username
         ;(token as unknown as { email?: unknown }).email = (user as any).email
+        ;(token as any).isNewUser = Boolean((user as any).isNewUser)
       }
 
       // Ensure tokens created by OAuth have our DB user id/role/username.
@@ -141,22 +144,23 @@ export const authOptions: NextAuthOptions = {
           ;(token as any).email = dbUser.email
           ;(token as any).username = dbUser.username
           ;(token as any).role = dbUser.role
-          ;(token as any).needsProfileCompletion = false
+          ;(token as any).isNewUser = false
         } else {
-          ;(token as any).needsProfileCompletion = true
+          ;(token as any).isNewUser = true
         }
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
-        if (!(token as any).needsProfileCompletion) {
+        if (token.sub) {
           ;(session.user as any).id = token.sub
         }
         ;(session.user as any).role = (token as any).role
         ;(session.user as any).username = (token as any).username
         ;(session.user as any).email = (token as any).email
-        ;(session.user as any).needsProfileCompletion = Boolean((token as any).needsProfileCompletion)
+        ;(session as any).isNewUser = Boolean((token as any).isNewUser)
+        ;(session.user as any).isNewUser = Boolean((token as any).isNewUser)
       }
       return session
     }

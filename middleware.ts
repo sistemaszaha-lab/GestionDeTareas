@@ -23,8 +23,8 @@ export async function middleware(req: NextRequest) {
     secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
   }).catch(() => null)
   if (nextAuthToken) {
-    const needsProfileCompletion = (nextAuthToken as any)?.needsProfileCompletion === true
-    if (needsProfileCompletion && !pathname.startsWith("/complete-profile")) {
+    const isNewUser = (nextAuthToken as any)?.isNewUser === true
+    if (isNewUser && !pathname.startsWith("/complete-profile")) {
       const url = req.nextUrl.clone()
       url.pathname = "/complete-profile"
       return NextResponse.redirect(url)

@@ -8,8 +8,7 @@ export default async function CompleteProfilePage() {
   const user = session?.user as any
 
   if (!user?.email) redirect("/login")
-  if (!user?.needsProfileCompletion) redirect("/dashboard")
+  if (!(session as any)?.isNewUser) redirect("/dashboard")
 
   return <CompleteProfileClient email={user.email as string} defaultName={(user.name as string | undefined) ?? ""} />
 }
-
