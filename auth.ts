@@ -1,6 +1,7 @@
 import type { NextAuthOptions } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
+import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 
@@ -56,12 +57,14 @@ if (process.env.NODE_ENV === "production") {
 }
 
 export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
   secret: authSecret,
   useSecureCookies: process.env.NODE_ENV === "production",
   debug: debugEnabled,
   pages: {
     signIn: "/login",
-    error: "/login"
+    error: "/login",
+    newUser: "/complete-profile"
   },
   session: {
     strategy: "jwt"
@@ -92,24 +95,8 @@ export const authOptions: NextAuthOptions = {
         const emailVerified = (profile as any)?.email_verified
         if (emailVerified === false) return "/login?error=google_unverified"
 
-        const existing = await prisma.user.findUnique({
-          where: { email },
-          select: { id: true, email: true, name: true, username: true, role: true }
-        })
-
-        if (!existing) {
-          // Usuario nuevo (Google): establecer flag para redirección en frontend
-          ;(user as any).isNewUser = true
-          return true
-        }
-
-        ;(user as any).id = existing.id
-        ;(user as any).email = existing.email
-        ;(user as any).name = existing.name
-        ;(user as any).username = existing.username
-        ;(user as any).role = existing.role
-
-        ;(user as any).isNewUser = false
+        // PrismaAdapter se encarga de detectar usuarios nuevos automáticamente
+        // NextAuth redirige a pages.newUser si no existe la Account
         return true
       }
 
@@ -121,33 +108,6 @@ export const authOptions: NextAuthOptions = {
         ;(token as unknown as { role?: unknown }).role = (user as any).role
         ;(token as unknown as { username?: unknown }).username = (user as any).username
         ;(token as unknown as { email?: unknown }).email = (user as any).email
-        ;(token as any).isNewUser = Boolean((user as any).isNewUser)
-      }
-
-      // Ensure tokens created by OAuth have our DB user id/role/username.
-      if (account?.provider === "google") {
-        const rawEmail = (profile as any)?.email ?? (user as any)?.email ?? (token as any)?.email
-        const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : ""
-        ;(token as any).email = email || undefined
-        ;(token as any).name =
-          typeof (profile as any)?.name === "string" ? (profile as any).name : typeof (user as any)?.name === "string" ? (user as any).name : (token as any).name
-
-        const dbUser = email
-          ? await prisma.user.findUnique({
-              where: { email },
-              select: { id: true, email: true, username: true, role: true }
-            })
-          : null
-
-        if (dbUser) {
-          token.sub = dbUser.id
-          ;(token as any).email = dbUser.email
-          ;(token as any).username = dbUser.username
-          ;(token as any).role = dbUser.role
-          ;(token as any).isNewUser = false
-        } else {
-          ;(token as any).isNewUser = true
-        }
       }
       return token
     },
@@ -159,8 +119,6 @@ export const authOptions: NextAuthOptions = {
         ;(session.user as any).role = (token as any).role
         ;(session.user as any).username = (token as any).username
         ;(session.user as any).email = (token as any).email
-        ;(session as any).isNewUser = Boolean((token as any).isNewUser)
-        ;(session.user as any).isNewUser = Boolean((token as any).isNewUser)
       }
       return session
     }
