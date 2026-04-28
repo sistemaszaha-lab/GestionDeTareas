@@ -7,43 +7,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  ADMIN
-  USER
-}
-
-enum TaskStatus {
-  PENDING
-  IN_PROGRESS
-  DONE
-}
-
-enum TaskPriority {
-  LOW
-  MEDIUM
-  HIGH
-}
-
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  firstName    String
-  middleName   String?
-  lastName     String
-  email        String   @unique
-  phone        String
-  username     String   @unique
-  image        String?
-  // Stores a bcrypt hash. Never store a plain-text password.
-  password     String?
-  role         UserRole @default(USER)
-  createdAt    DateTime @default(now())
-
-  accounts Account[]
-  sessions Session[]
-
-  tasksAssigned Task[]    @relation("TaskAssignedUsers")
+  id            String    @id @default(cuid())
+  name          String
+  username      String    @unique
+  image         String?
+  password      String?
+  role          UserRole  @default(USER)
+  createdAt     DateTime  @default(now())
+  firstName     String
+  middleName    String?
+  lastName      String
+  email         String    @unique
+  phone         String
+  accounts      Account[]
   comments      Comment[]
+  sessions      Session[]
+  tasksAssigned Task[]    @relation("TaskAssignedUsers")
 }
 
 model Account {
@@ -59,8 +39,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -71,8 +50,7 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -86,17 +64,17 @@ model VerificationToken {
 }
 
 model Task {
-  id           String     @id @default(cuid())
-  title        String
-  description  String?
-  status       TaskStatus @default(PENDING)
-  priority     TaskPriority @default(MEDIUM)
-  dueDate      DateTime?
-  tags         String[]   @default([])
-  attachments  Json?      @default("[]")
-  createdAt    DateTime   @default(now())
-  assignedUsers User[] @relation("TaskAssignedUsers")
-  comments   Comment[]
+  id            String       @id @default(cuid())
+  title         String
+  description   String?
+  status        TaskStatus   @default(PENDING)
+  priority      TaskPriority @default(MEDIUM)
+  dueDate       DateTime?
+  createdAt     DateTime     @default(now())
+  tags          String[]     @default([])
+  attachments   Json?        @default("[]")
+  comments      Comment[]
+  assignedUsers User[]       @relation("TaskAssignedUsers")
 
   @@index([status])
   @@index([priority])
@@ -109,10 +87,26 @@ model Comment {
   taskId    String
   userId    String
   createdAt DateTime @default(now())
-
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
 
   @@index([taskId])
   @@index([userId])
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
 }

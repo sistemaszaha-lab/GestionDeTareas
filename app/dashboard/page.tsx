@@ -11,5 +11,16 @@ export default async function DashboardPage() {
     orderBy: { name: "asc" }
   })
 
-  return <KanbanBoard currentUser={user} users={users} initialTasks={[]} />
+  const tasks = await prisma.task.findMany({
+    include: {
+      assignedUsers: { select: { id: true, name: true, username: true, role: true } },
+      comments: {
+        include: { user: { select: { id: true, name: true, username: true } } },
+        orderBy: { createdAt: "asc" }
+      }
+    },
+    orderBy: { createdAt: "desc" }
+  })
+
+  return <KanbanBoard currentUser={user} users={users} initialTasks={tasks as any} />
 }

@@ -119,6 +119,7 @@ export default function KanbanBoard({
         { cache: "no-store" },
         { defaultError: "No se pudo cargar", logTag: "GET /api/tasks" }
       )
+      console.log(`[KanbanBoard] Fetched ${data.tasks?.length ?? 0} tasks`)
       setTasks(data.tasks ?? [])
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error")
@@ -398,8 +399,13 @@ export default function KanbanBoard({
                           onAddComment={async (content) => addComment(t.id, content)}
                         />
                       ))}
-                      {colTasks.length === 0 ? (
-                        <div className="py-8 text-center text-xs text-slate-600 dark:text-slate-400">Sin tareas</div>
+                      {tasksByStatus(col.key).length === 0 ? (
+                        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-100 p-8 text-center dark:border-slate-800/50">
+                          <p className="text-xs text-slate-500">Sin tareas en esta columna</p>
+                          {tasks.length > 0 && filteredTasks.length === 0 && (
+                            <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-400">Hay tareas ocultas por los filtros actuales</p>
+                          )}
+                        </div>
                       ) : null}
                     </>
                   )}

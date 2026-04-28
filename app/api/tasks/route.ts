@@ -36,6 +36,8 @@ export async function GET(req: Request) {
     const status = url.searchParams.get("status") ?? undefined
     const priority = url.searchParams.get("priority") ?? undefined
 
+    console.log(`[GET /api/tasks] assignedToId: ${assignedToId}, status: ${status}, priority: ${priority}`)
+
     const tasks = await prisma.task.findMany({
       where: {
         ...(assignedToId ? { assignedUsers: { some: { id: assignedToId } } } : {}),
@@ -52,6 +54,7 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "desc" }
     })
 
+    console.log(`[GET /api/tasks] Found ${tasks.length} tasks`)
     return jsonOk({ tasks })
   } catch (err) {
     return prismaErrorResponse(err) ?? jsonException(err, { route: "GET /api/tasks" })
