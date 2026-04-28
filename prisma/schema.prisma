@@ -42,7 +42,7 @@ model User {
   accounts Account[]
   sessions Session[]
 
-  tasksAssigned Task[]    @relation("TaskAssignedTo")
+  tasksAssigned Task[]    @relation("TaskAssignedUsers")
   comments      Comment[]
 }
 
@@ -91,18 +91,15 @@ model Task {
   description  String?
   status       TaskStatus @default(PENDING)
   priority     TaskPriority @default(MEDIUM)
-  assignedToId String
   dueDate      DateTime?
   tags         String[]   @default([])
   attachments  Json?      @default("[]")
   createdAt    DateTime   @default(now())
-
-  assignedTo User      @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: Restrict)
+  assignedUsers User[] @relation("TaskAssignedUsers")
   comments   Comment[]
 
   @@index([status])
   @@index([priority])
-  @@index([assignedToId])
   @@index([dueDate])
 }
 

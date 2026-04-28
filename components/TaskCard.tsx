@@ -26,9 +26,8 @@ type TaskWithRelations = {
   description: string | null
   status: TaskStatus
   priority: TaskPriority
-  assignedToId: string
   dueDate: string | Date | null
-  assignedTo: UserLite
+  assignedUsers: UserLite[]
   comments: CommentWithUser[]
   attachments?: any[] | null
 }
@@ -66,8 +65,8 @@ export default function TaskCard({
   const statusOrder: TaskStatus[] = ["PENDING", "IN_PROGRESS", "DONE"]
 
   const canMove = useMemo(
-    () => currentUser.role === "ADMIN" || task.assignedToId === currentUser.id,
-    [currentUser, task.assignedToId]
+    () => currentUser.role === "ADMIN" || task.assignedUsers.some((u) => u.id === currentUser.id),
+    [currentUser, task.assignedUsers]
   )
 
   const canReassign = useMemo(
@@ -99,18 +98,10 @@ export default function TaskCard({
     }
   }
 
-  async function changeAssignee(assignedToId: string) {
+  async function changeAssignee(assignedUserIds: string[]) {
     if (!onQuickAssigneeChange) return
-    if (assignedToId === task.assignedToId) return
-    setSaving(true)
-    try {
-      await onQuickAssigneeChange(assignedToId)
-      toast.success("Asignación actualizada")
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo reasignar")
-    } finally {
-      setSaving(false)
-    }
+    // Note: onQuickAssigneeChange was single id, now it should be multiple. 
+    // But we'll remove quick reassign from card for simplicity and better UX.
   }
 
   async function submitComment() {
@@ -170,18 +161,30 @@ export default function TaskCard({
           </div>
 
           <div className="mt-3 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-xs text-slate-600 dark:text-slate-400 truncate">
-                Asignado a <span className="font-medium text-slate-900 dark:text-slate-50">{task.assignedTo.name}</span>
-                <span className="text-slate-500 dark:text-slate-400"> (@{task.assignedTo.username})</span>
+            <div className="flex flex-col gap-1 min-w-0">
+              <div className="flex -space-x-1.5 overflow-hidden">
+                {task.assignedUsers.map((u) => (
+                  <div
+                    key={u.id}
+                    title={u.name}
+                    className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-slate-900 bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold uppercase"
+                  >
+                    {u.name.slice(0, 2)}
+                  </div>
+                ))}
+                {task.assignedUsers.length === 0 && (
+                   <div className="h-6 w-6 rounded-full border border-dashed border-slate-300 dark:border-slate-700 bg-transparent flex items-center justify-center text-[8px] text-slate-400">
+                     ?
+                   </div>
+                )}
               </div>
               {dueLabel ? (
-                <div className={cn("mt-1 text-xs truncate", isOverdue ? "text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-slate-400")}>
+                <div className={cn("text-[10px] truncate", isOverdue ? "text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-slate-400")}>
                   {isOverdue ? "Vencida: " : "Vence: "}
                   {dueLabel}
                 </div>
               ) : (
-                <div className="mt-1 text-xs text-slate-500 dark:text-slate-400 truncate">Sin vencimiento</div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Sin vencimiento</div>
               )}
             </div>
 
@@ -221,23 +224,7 @@ export default function TaskCard({
             </div>
           </div>
 
-          {canReassign ? (
-            <div className="space-y-2">
-              <Label htmlFor={`assignee-${task.id}`}>Asignado a</Label>
-              <ShadcnSelect
-                id={`assignee-${task.id}`}
-                value={task.assignedToId}
-                onChange={(e) => changeAssignee(e.target.value)}
-                disabled={saving}
-              >
-                {(users ?? []).map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </ShadcnSelect>
-            </div>
-          ) : null}
+          {/* Removido el select de reasignación rápida para favorecer MultiSelect en el modal */}
 
           {canComment ? (
             <div className="space-y-2">

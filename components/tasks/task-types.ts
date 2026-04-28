@@ -24,10 +24,9 @@ export type TaskWithRelations = {
   description: string | null
   status: TaskStatus
   priority: TaskPriority
-  assignedToId: string
   dueDate: string | Date | null
   createdAt: string | Date
-  assignedTo: UserLite
+  assignedUsers: UserLite[]
   comments: CommentWithUser[]
   tags?: string[]
   attachments?: Attachment[] | null

@@ -20,10 +20,13 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
     if (!user) return jsonError("Unauthorized", 401);
 
     const { id: taskId, attachmentId } = await Promise.resolve(ctx.params);
-    const task = await prisma.task.findUnique({ where: { id: taskId } });
+    const task = await prisma.task.findUnique({ 
+      where: { id: taskId },
+      include: { assignedUsers: { select: { id: true } } }
+    });
     if (!task) return jsonError("Tarea no encontrada", 404);
 
-    const canEdit = user.role === "ADMIN" || task.assignedToId === user.id;
+    const canEdit = user.role === "ADMIN" || task.assignedUsers.some((u) => u.id === user.id);
     if (!canEdit) return jsonError("No tienes permisos para modificar esta tarea", 403);
 
     const attachments = Array.isArray(task.attachments) ? (task.attachments as Attachment[]) : [];

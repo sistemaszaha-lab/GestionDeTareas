@@ -1,4 +1,4 @@
-﻿import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/prisma"
 import { jsonError, jsonException, jsonOk } from "@/lib/http"
 import { requireSession } from "@/lib/server-auth"
 import { createTaskSchema } from "@/lib/validators"
@@ -38,12 +38,12 @@ export async function GET(req: Request) {
 
     const tasks = await prisma.task.findMany({
       where: {
-        ...(assignedToId ? { assignedToId } : {}),
+        ...(assignedToId ? { assignedUsers: { some: { id: assignedToId } } } : {}),
         ...(status ? { status: status as any } : {}),
         ...(priority ? { priority: priority as any } : {})
       },
       include: {
-        assignedTo: { select: { id: true, name: true, username: true, role: true } },
+        assignedUsers: { select: { id: true, name: true, username: true, role: true } },
         comments: {
           include: { user: { select: { id: true, name: true, username: true } } },
           orderBy: { createdAt: "asc" }
@@ -75,11 +75,11 @@ export async function POST(req: Request) {
       return jsonError("Datos inválidos", 400)
     }
 
-    const assignedUser = await prisma.user.findUnique({
-      where: { id: parsed.data.assignedToId },
+    const assignedUsers = await prisma.user.findMany({
+      where: { id: { in: parsed.data.assignedUserIds } },
       select: { id: true }
     })
-    if (!assignedUser) return jsonError("El usuario asignado no existe.", 400)
+    if (assignedUsers.length === 0) return jsonError("Debes asignar al menos un usuario válido.", 400)
 
     const dueDate = parseDueDate(parsed.data.dueDate ?? null)
     const tags = parsed.data.tags ?? []
@@ -88,13 +88,13 @@ export async function POST(req: Request) {
       data: {
         title: parsed.data.title,
         description: parsed.data.description ?? null,
-        assignedToId: parsed.data.assignedToId,
+        assignedUsers: { connect: parsed.data.assignedUserIds.map(id => ({ id })) },
         ...(parsed.data.priority ? { priority: parsed.data.priority as any } : {}),
         ...(parsed.data.dueDate !== undefined ? { dueDate } : {}),
         tags
       },
       include: {
-        assignedTo: { select: { id: true, name: true, username: true, role: true } },
+        assignedUsers: { select: { id: true, name: true, username: true, role: true } },
         comments: {
           include: { user: { select: { id: true, name: true, username: true } } },
           orderBy: { createdAt: "asc" }

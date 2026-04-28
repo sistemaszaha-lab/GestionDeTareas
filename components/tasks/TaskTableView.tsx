@@ -8,6 +8,7 @@ import { Input } from "@/components/shadcn/ui/input"
 import { Badge } from "@/components/shadcn/ui/badge"
 import { Select as ShadcnSelect } from "@/components/shadcn/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/shadcn/ui/table"
+import { MultiSelect } from "@/components/ui/MultiSelect"
 
 type SortKey = "title" | "status" | "assignedTo" | "dueDate" | "priority"
 type SortDir = "asc" | "desc"
@@ -42,7 +43,7 @@ export default function TaskTableView({
       description: string | null
       status: TaskStatus
       priority: TaskPriority
-      assignedToId: string
+      assignedUserIds: string[]
       dueDate: string | null
       tags: string[]
     }>
@@ -58,7 +59,8 @@ export default function TaskTableView({
   const filtered = useMemo(() => {
     if (!q) return tasks
     return tasks.filter((t) => {
-      const hay = `${t.title} ${t.description ?? ""} ${(t.tags ?? []).join(" ")} ${t.assignedTo?.name ?? ""}`.toLowerCase()
+      const assignedNames = t.assignedUsers.map(u => u.name).join(" ")
+      const hay = `${t.title} ${t.description ?? ""} ${(t.tags ?? []).join(" ")} ${assignedNames}`.toLowerCase()
       return hay.includes(q)
     })
   }, [tasks, q])
@@ -74,7 +76,7 @@ export default function TaskTableView({
       if (sortKey === "title") cmp = a.title.localeCompare(b.title)
       if (sortKey === "status") cmp = (statusRank[a.status] ?? 0) - (statusRank[b.status] ?? 0)
       if (sortKey === "priority") cmp = (priorityRank[a.priority] ?? 0) - (priorityRank[b.priority] ?? 0)
-      if (sortKey === "assignedTo") cmp = (a.assignedTo?.name ?? "").localeCompare(b.assignedTo?.name ?? "")
+      if (sortKey === "assignedTo") cmp = (a.assignedUsers[0]?.name ?? "").localeCompare(b.assignedUsers[0]?.name ?? "")
       if (sortKey === "dueDate") cmp = compareMaybe(isoDateOnly(a.dueDate) || null, isoDateOnly(b.dueDate) || null)
       return sortDir === "asc" ? cmp : -cmp
     })
@@ -142,7 +144,7 @@ export default function TaskTableView({
 
         <TableBody>
           {sorted.map((t) => {
-            const canEditStatus = canAdmin || t.assignedToId === currentUser.id
+            const canEditStatus = canAdmin || t.assignedUsers.some(u => u.id === currentUser.id)
             const canEditFields = canAdmin
             const isSaving = savingId === t.id
             return (
@@ -179,19 +181,12 @@ export default function TaskTableView({
                   </ShadcnSelect>
                 </TableCell>
 
-                <TableCell className="whitespace-nowrap">
-                  <ShadcnSelect
-                    value={t.assignedToId}
-                    disabled={!canEditFields || isSaving}
-                    onChange={(e) => void save(t.id, { assignedToId: e.target.value })}
-                    className="h-9"
-                  >
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))}
-                  </ShadcnSelect>
+                <TableCell className="min-w-[12rem]">
+                  <MultiSelect
+                    options={users}
+                    selected={t.assignedUsers.map(u => u.id)}
+                    onChange={(next) => void save(t.id, { assignedUserIds: next })}
+                  />
                 </TableCell>
 
                 <TableCell className="whitespace-nowrap">

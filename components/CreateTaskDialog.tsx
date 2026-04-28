@@ -16,6 +16,7 @@ import { Input } from "@/components/shadcn/ui/input"
 import { Label } from "@/components/shadcn/ui/label"
 import { Textarea } from "@/components/shadcn/ui/textarea"
 import { Select as ShadcnSelect } from "@/components/shadcn/ui/select"
+import { MultiSelect } from "@/components/ui/MultiSelect"
 
 type UserLite = { id: string; name: string; username: string; role: UserRole }
 
@@ -35,7 +36,7 @@ export default function CreateTaskDialog({
   onCreate: (input: {
     title: string
     description: string | null
-    assignedToId: string
+    assignedUserIds: string[]
     priority: TaskPriority
     dueDate: string | null
     tags?: string[]
@@ -43,15 +44,15 @@ export default function CreateTaskDialog({
 }) {
   const canAdmin = currentUser.role === "ADMIN"
 
-  const defaultAssignedToId = useMemo(() => {
-    if (!users.length) return currentUser.id
+  const defaultAssignedUserIds = useMemo(() => {
+    if (!users.length) return [currentUser.id]
     const current = users.find((u) => u.id === currentUser.id)?.id
-    return current ?? users[0].id
+    return current ? [current] : []
   }, [currentUser.id, users])
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [assignedToId, setAssignedToId] = useState<string>(defaultAssignedToId)
+  const [assignedUserIds, setAssignedUserIds] = useState<string[]>(defaultAssignedUserIds)
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM")
   const [dueDate, setDueDate] = useState("")
   const [tags, setTags] = useState("")
@@ -61,12 +62,12 @@ export default function CreateTaskDialog({
     if (!open) return
     setTitle("")
     setDescription("")
-    setAssignedToId(defaultAssignedToId)
+    setAssignedUserIds(defaultAssignedUserIds)
     setPriority("MEDIUM")
     setDueDate("")
     setTags("")
     setSaving(false)
-  }, [open, defaultAssignedToId])
+  }, [open, defaultAssignedUserIds])
 
   function parseTags(input: string) {
     return input
@@ -85,7 +86,7 @@ export default function CreateTaskDialog({
       await onCreate({
         title: t,
         description: description.trim() ? description.trim() : null,
-        assignedToId: canAdmin ? assignedToId : currentUser.id,
+        assignedUserIds: canAdmin ? assignedUserIds : [currentUser.id],
         priority,
         dueDate: dueDate ? dueDate : null,
         tags: tags.trim() ? parseTags(tags) : []
@@ -158,13 +159,11 @@ export default function CreateTaskDialog({
             {canAdmin && users.length ? (
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="task-assigned">Asignar a</Label>
-                <ShadcnSelect id="task-assigned" value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)}>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </ShadcnSelect>
+                <MultiSelect
+                  options={users}
+                  selected={assignedUserIds}
+                  onChange={setAssignedUserIds}
+                />
               </div>
             ) : null}
           </div>

@@ -1,4 +1,4 @@
-﻿import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/prisma"
 import { jsonError, jsonException, jsonOk } from "@/lib/http"
 import { requireSession } from "@/lib/server-auth"
 import { updateTaskSchema } from "@/lib/validators"
@@ -19,7 +19,10 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     if (!user) return jsonError("Unauthorized", 401)
 
     const { id } = await Promise.resolve(ctx.params)
-    const existing = await prisma.task.findUnique({ where: { id } })
+    const existing = await prisma.task.findUnique({ 
+      where: { id },
+      include: { assignedUsers: { select: { id: true } } }
+    })
     if (!existing) return jsonError("No encontrada", 404)
 
     const body = await req.json().catch(() => null)
@@ -27,10 +30,10 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     if (!parsed.success) return jsonError("Datos inválidos", 400)
 
     const canEditAll = user.role === "ADMIN"
-    const isAssignee = existing.assignedToId === user.id
+    const isAssignee = existing.assignedUsers.some((u: any) => u.id === user.id)
     if (!canEditAll && !isAssignee) return jsonError("Forbidden", 403)
 
-    const attemptedAssigneeChange = parsed.data.assignedToId && parsed.data.assignedToId !== existing.assignedToId
+    const attemptedAssigneeChange = parsed.data.assignedUserIds && JSON.stringify(parsed.data.assignedUserIds.sort()) !== JSON.stringify(existing.assignedUsers.map((u: any) => u.id).sort())
     const attemptedPriorityChange = parsed.data.priority && parsed.data.priority !== (existing as any).priority
     const attemptedTextChange =
       (typeof parsed.data.title === "string" && parsed.data.title !== existing.title) ||
@@ -52,12 +55,12 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
         ...(typeof parsed.data.description !== "undefined" ? { description: parsed.data.description ?? null } : {}),
         ...(parsed.data.status ? { status: parsed.data.status as any } : {}),
         ...(parsed.data.priority ? { priority: parsed.data.priority as any } : {}),
-        ...(parsed.data.assignedToId ? { assignedToId: parsed.data.assignedToId } : {}),
+        ...(parsed.data.assignedUserIds ? { assignedUsers: { set: parsed.data.assignedUserIds.map(id => ({ id })) } } : {}),
         ...dueDatePatch,
         ...(typeof parsed.data.tags !== "undefined" ? { tags: parsed.data.tags ?? [] } : {})
       },
       include: {
-        assignedTo: { select: { id: true, name: true, username: true, role: true } },
+        assignedUsers: { select: { id: true, name: true, username: true, role: true } },
         comments: {
           include: { user: { select: { id: true, name: true, username: true } } },
           orderBy: { createdAt: "asc" }

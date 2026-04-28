@@ -53,7 +53,7 @@ export default function KanbanBoard({
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((t) => {
-      if (filterUserId !== "all" && t.assignedToId !== filterUserId) return false
+      if (filterUserId !== "all" && !t.assignedUsers.some((u) => u.id === filterUserId)) return false
       if (filterStatus !== "all" && t.status !== filterStatus) return false
       if (filterPriority !== "all" && t.priority !== filterPriority) return false
       return true
@@ -61,7 +61,7 @@ export default function KanbanBoard({
   }, [tasks, filterUserId, filterStatus, filterPriority])
 
   const statsBase = useMemo(() => {
-    return currentUser.role === "ADMIN" ? filteredTasks : filteredTasks.filter((t) => t.assignedToId === currentUser.id)
+    return currentUser.role === "ADMIN" ? filteredTasks : filteredTasks.filter((t) => t.assignedUsers.some((u) => u.id === currentUser.id))
   }, [filteredTasks, currentUser.id, currentUser.role])
 
   const totalCount = useMemo(() => statsBase.length, [statsBase])
@@ -195,7 +195,7 @@ export default function KanbanBoard({
       description: string | null
       status: TaskStatus
       priority: TaskPriority
-      assignedToId: string
+      assignedUserIds: string[]
       dueDate: string | null
       tags: string[]
     }>
@@ -216,7 +216,7 @@ export default function KanbanBoard({
   async function createTask(input: {
     title: string
     description: string | null
-    assignedToId: string
+    assignedUserIds: string[]
     priority: TaskPriority
     dueDate: string | null
     tags?: string[]
@@ -395,7 +395,6 @@ export default function KanbanBoard({
                           users={users}
                           onOpen={() => setActiveTask(t)}
                           onQuickStatusChange={(status) => updateTask(t.id, { status })}
-                          onQuickAssigneeChange={(assignedToId) => updateTask(t.id, { assignedToId })}
                           onAddComment={async (content) => addComment(t.id, content)}
                         />
                       ))}

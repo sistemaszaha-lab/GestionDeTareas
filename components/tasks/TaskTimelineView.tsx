@@ -93,7 +93,11 @@ export default function TaskTimelineView({ tasks }: { tasks: TaskWithRelations[]
                     <div className="min-w-0 px-3 py-2">
                       <div className="truncate text-sm font-medium text-slate-900 dark:text-slate-50">{task.title}</div>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
-                        <Badge variant="outline">{task.assignedTo?.name ?? "—"}</Badge>
+                        <Badge variant="outline">
+                          {task.assignedUsers.length > 1 
+                            ? `${task.assignedUsers[0].name} +${task.assignedUsers.length - 1}` 
+                            : task.assignedUsers[0]?.name ?? "—"}
+                        </Badge>
                         {task.dueDate ? <Badge variant="secondary">Vence {new Date(task.dueDate as any).toISOString().slice(0, 10)}</Badge> : null}
                       </div>
                     </div>

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
+import { X } from "lucide-react"
 import { cn } from "@/lib/ui"
 
 type DialogContextValue = {
@@ -101,13 +102,21 @@ function DialogContent({ className, children }: { className?: string; children: 
           role="dialog"
           aria-modal="true"
           className={cn(
-            "w-full max-w-lg rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-xl",
+            "relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-xl",
             "dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-50",
             "animate-in fade-in-0 zoom-in-95",
+            "max-h-[90vh] overflow-y-auto scroll-smooth",
             className
           )}
         >
           {children}
+          <button
+            onClick={() => onOpenChange(false)}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-white transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:pointer-events-none dark:ring-offset-slate-950 dark:focus:ring-slate-300"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </button>
         </div>
       </div>
     </div>,

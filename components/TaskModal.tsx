@@ -18,6 +18,7 @@ import { Select as ShadcnSelect } from "@/components/shadcn/ui/select"
 import { Badge } from "@/components/shadcn/ui/badge"
 import { Card, CardContent } from "@/components/shadcn/ui/card"
 import { cn } from "@/lib/ui"
+import { MultiSelect } from "@/components/ui/MultiSelect"
 
 type UserLite = { id: string; name: string; username: string; role: UserRole }
 
@@ -43,9 +44,8 @@ type TaskWithRelations = {
   description: string | null
   status: TaskStatus
   priority: TaskPriority
-  assignedToId: string
   dueDate: string | Date | null
-  assignedTo: UserLite
+  assignedUsers: UserLite[]
   comments: CommentWithUser[]
   attachments?: Attachment[] | null
 }
@@ -74,7 +74,7 @@ export default function TaskModal(props: {
   onCreate?: (input: {
     title: string
     description: string | null
-    assignedToId: string
+    assignedUserIds: string[]
     priority: TaskPriority
     dueDate: string | null
   }) => Promise<void>
@@ -85,7 +85,7 @@ export default function TaskModal(props: {
       description: string | null
       status: TaskStatus
       priority: TaskPriority
-      assignedToId: string
+      assignedUserIds: string[]
       dueDate: string | null
     }>
   ) => Promise<void>
@@ -99,12 +99,12 @@ export default function TaskModal(props: {
   const canAdmin = currentUser.role === "ADMIN"
   const canEditStatus = useMemo(() => {
     if (!task) return false
-    return canAdmin || task.assignedToId === currentUser.id
+    return canAdmin || task.assignedUsers.some((u) => u.id === currentUser.id)
   }, [canAdmin, currentUser.id, task])
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [assignedToId, setAssignedToId] = useState<string>(users[0]?.id ?? "")
+  const [assignedUserIds, setAssignedUserIds] = useState<string[]>([])
   const [status, setStatus] = useState<TaskStatus>("PENDING")
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM")
   const [dueDate, setDueDate] = useState("")
@@ -123,7 +123,7 @@ export default function TaskModal(props: {
     if (mode === "create") {
       setTitle("")
       setDescription("")
-      setAssignedToId(users[0]?.id ?? "")
+      setAssignedUserIds([])
       setStatus("PENDING")
       setPriority("MEDIUM")
       setDueDate("")
@@ -133,7 +133,7 @@ export default function TaskModal(props: {
     if (!task) return
     setTitle(task.title)
     setDescription(task.description ?? "")
-    setAssignedToId(task.assignedToId)
+    setAssignedUserIds(task.assignedUsers.map((u) => u.id))
     setStatus(task.status)
     setPriority(task.priority)
     setDueDate(toInputDate(task.dueDate))
@@ -148,7 +148,7 @@ export default function TaskModal(props: {
       await props.onCreate({
         title: title.trim(),
         description: description.trim() ? description.trim() : null,
-        assignedToId,
+        assignedUserIds,
         priority,
         dueDate: dueDate ? dueDate : null
       })
@@ -165,7 +165,7 @@ export default function TaskModal(props: {
       if (canAdmin) {
         patch.title = title.trim()
         patch.description = description.trim() ? description.trim() : null
-        patch.assignedToId = assignedToId
+        patch.assignedUserIds = assignedUserIds
         patch.priority = priority
         patch.dueDate = dueDate ? dueDate : null
       }
@@ -292,13 +292,12 @@ export default function TaskModal(props: {
 
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="task-assigned">Asignar a</Label>
-                <ShadcnSelect id="task-assigned" value={assignedToId} onChange={(e) => setAssignedToId(e.target.value)}>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </ShadcnSelect>
+                <MultiSelect
+                  options={users}
+                  selected={assignedUserIds}
+                  onChange={setAssignedUserIds}
+                  placeholder="Seleccionar usuarios..."
+                />
               </div>
             </div>
 
@@ -316,8 +315,19 @@ export default function TaskModal(props: {
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={priorityBadgeVariant as any}>{priority}</Badge>
               <Badge variant={statusBadgeVariant as any}>{status}</Badge>
+              <div className="flex -space-x-2 overflow-hidden ml-1">
+                {task.assignedUsers.map((u) => (
+                  <div
+                    key={u.id}
+                    title={u.name}
+                    className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-slate-900 bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold uppercase"
+                  >
+                    {u.name.slice(0, 2)}
+                  </div>
+                ))}
+              </div>
               <span className="text-xs text-slate-600 dark:text-slate-400">
-                Asignado: <span className="font-medium text-slate-900 dark:text-slate-50">{task.assignedTo.name}</span>
+                {task.assignedUsers.length > 1 ? `${task.assignedUsers.length} asignados` : task.assignedUsers[0]?.name || "Sin asignar"}
               </span>
               {dueDateObj ? (
                 <span
@@ -340,20 +350,13 @@ export default function TaskModal(props: {
                 <Input id="detail-title" value={title} onChange={(e) => setTitle(e.target.value)} disabled={!canAdmin} />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="detail-assigned">Asignado a</Label>
-                <ShadcnSelect
-                  id="detail-assigned"
-                  value={assignedToId}
-                  onChange={(e) => setAssignedToId(e.target.value)}
-                  disabled={!canAdmin}
-                >
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </ShadcnSelect>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="detail-assigned">Asignados</Label>
+                <MultiSelect
+                  options={users}
+                  selected={assignedUserIds}
+                  onChange={setAssignedUserIds}
+                />
               </div>
 
               <div className="space-y-2">

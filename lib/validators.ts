@@ -22,7 +22,7 @@ export const createTaskSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().max(5000).optional().nullable(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
-  assignedToId: z.string().trim().min(1),
+  assignedUserIds: z.array(z.string().trim().min(1)),
   dueDate: isoDate.optional().nullable(),
   tags: tagsSchema.optional()
 })
@@ -32,7 +32,7 @@ export const updateTaskSchema = z.object({
   description: z.string().trim().max(5000).optional().nullable(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
   status: z.enum(["PENDING", "IN_PROGRESS", "DONE"]).optional(),
-  assignedToId: z.string().trim().min(1).optional(),
+  assignedUserIds: z.array(z.string().trim().min(1)).optional(),
   dueDate: isoDate.optional().nullable(),
   tags: tagsSchema.optional()
 })

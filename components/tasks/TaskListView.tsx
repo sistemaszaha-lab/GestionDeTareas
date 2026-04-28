@@ -8,6 +8,7 @@ import { Button } from "@/components/shadcn/ui/button"
 import { Input } from "@/components/shadcn/ui/input"
 import { Badge } from "@/components/shadcn/ui/badge"
 import { Select as ShadcnSelect } from "@/components/shadcn/ui/select"
+import { MultiSelect } from "@/components/ui/MultiSelect"
 
 function isoDateOnly(d: string | Date | null) {
   if (!d) return ""
@@ -51,7 +52,7 @@ export default function TaskListView({
   onCreate: (input: {
     title: string
     description: string | null
-    assignedToId: string
+    assignedUserIds: string[]
     priority: TaskPriority
     dueDate: string | null
     tags?: string[]
@@ -63,7 +64,7 @@ export default function TaskListView({
       description: string | null
       status: TaskStatus
       priority: TaskPriority
-      assignedToId: string
+      assignedUserIds: string[]
       dueDate: string | null
       tags: string[]
     }>
@@ -71,9 +72,9 @@ export default function TaskListView({
 }) {
   const canAdmin = currentUser.role === "ADMIN"
 
-  const defaultAssigneeId = useMemo(() => {
+  const defaultAssigneeIds = useMemo(() => {
     const found = users.find((u) => u.id === currentUser.id)?.id
-    return found ?? users[0]?.id ?? currentUser.id
+    return found ? [found] : []
   }, [currentUser.id, users])
 
   const [newTitle, setNewTitle] = useState("")
@@ -87,7 +88,7 @@ export default function TaskListView({
       await onCreate({
         title,
         description: null,
-        assignedToId: defaultAssigneeId,
+        assignedUserIds: defaultAssigneeIds,
         priority: "MEDIUM",
         dueDate: null
       })
@@ -156,26 +157,26 @@ function TaskRow({
       description: string | null
       status: TaskStatus
       priority: TaskPriority
-      assignedToId: string
+      assignedUserIds: string[]
       dueDate: string | null
       tags: string[]
     }>
   ) => Promise<void>
 }) {
-  const canEditStatus = canAdmin || task.assignedToId === currentUser.id
+  const canEditStatus = canAdmin || task.assignedUsers.some((u) => u.id === currentUser.id)
   const canEditFields = canAdmin
 
   const [title, setTitle] = useState(task.title)
   const [dueDate, setDueDate] = useState(isoDateOnly(task.dueDate))
   const [priority, setPriority] = useState<TaskPriority>(task.priority)
-  const [assignedToId, setAssignedToId] = useState(task.assignedToId)
+  const [assignedUserIds, setAssignedUserIds] = useState(task.assignedUsers.map((u) => u.id))
   const [tags, setTags] = useState(toTagsInput(task.tags))
   const [saving, setSaving] = useState(false)
 
   useEffect(() => setTitle(task.title), [task.title])
   useEffect(() => setDueDate(isoDateOnly(task.dueDate)), [task.dueDate])
   useEffect(() => setPriority(task.priority), [task.priority])
-  useEffect(() => setAssignedToId(task.assignedToId), [task.assignedToId])
+  useEffect(() => setAssignedUserIds(task.assignedUsers.map((u) => u.id)), [task.assignedUsers])
   useEffect(() => setTags(toTagsInput(task.tags)), [task.tags])
 
   async function save(patch: Parameters<typeof onUpdate>[1]) {
@@ -280,23 +281,15 @@ function TaskRow({
               </div>
 
               <div className="min-w-0">
-                <div className="text-[11px] font-medium text-slate-600 dark:text-slate-400">Asignado</div>
-                <ShadcnSelect
-                  value={assignedToId}
-                  onChange={(e) => {
-                    const next = e.target.value
-                    setAssignedToId(next)
-                    if (canEditFields) void save({ assignedToId: next })
+                <div className="text-[11px] font-medium text-slate-600 dark:text-slate-400">Asignados</div>
+                <MultiSelect
+                  options={users}
+                  selected={assignedUserIds}
+                  onChange={(next) => {
+                    setAssignedUserIds(next)
+                    if (canEditFields) void save({ assignedUserIds: next })
                   }}
-                  disabled={!canEditFields || saving}
-                  className="h-9"
-                >
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </ShadcnSelect>
+                />
               </div>
 
               <div className="min-w-0">
