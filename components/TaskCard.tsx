@@ -30,6 +30,7 @@ type TaskWithRelations = {
   dueDate: string | Date | null
   assignedTo: UserLite
   comments: CommentWithUser[]
+  attachments?: any[] | null
 }
 
 type CurrentUser = { id: string; role: "ADMIN" | "USER" }
@@ -162,7 +163,10 @@ export default function TaskCard({
                 <div className="mt-1 text-xs text-slate-600 dark:text-slate-400 line-clamp-2">{task.description}</div>
               ) : null}
             </div>
-            <div className="shrink-0 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{task.comments.length} com.</div>
+            <div className="shrink-0 flex gap-2 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+              {task.attachments?.length ? <span title={`${task.attachments.length} adjuntos`}>📎 {task.attachments.length}</span> : null}
+              <span title={`${task.comments.length} comentarios`}>💬 {task.comments.length}</span>
+            </div>
           </div>
 
           <div className="mt-3 flex items-start justify-between gap-3">

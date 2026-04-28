@@ -253,6 +253,29 @@ export default function KanbanBoard({
     setActiveTask((prev) => (prev?.id === taskId ? { ...prev, comments: [...prev.comments, data.comment] } : prev))
   }
 
+  async function addAttachment(taskId: string, formData: FormData) {
+    const data = await fetchJsonOrThrow<{ attachment?: any }>(
+      `/api/tasks/${taskId}/attachments`,
+      {
+        method: "POST",
+        body: formData
+      },
+      { defaultError: "No se pudo adjuntar", logTag: "POST /api/tasks/:id/attachments" }
+    )
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, attachments: [...(t.attachments || []), data.attachment] } : t)))
+    setActiveTask((prev) => (prev?.id === taskId ? { ...prev, attachments: [...(prev.attachments || []), data.attachment] } : prev))
+  }
+
+  async function deleteAttachment(taskId: string, attachmentId: string) {
+    await fetchJsonOrThrow<{ ok?: boolean }>(
+      `/api/tasks/${taskId}/attachments/${attachmentId}`,
+      { method: "DELETE" },
+      { defaultError: "No se pudo eliminar adjunto", logTag: "DELETE /api/tasks/:id/attachments/:attachmentId" }
+    )
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, attachments: (t.attachments || []).filter((a: any) => a.id !== attachmentId) } : t)))
+    setActiveTask((prev) => (prev?.id === taskId ? { ...prev, attachments: (prev.attachments || []).filter((a: any) => a.id !== attachmentId) } : prev))
+  }
+
   return (
     <div className="space-y-8">
       <div className="space-y-2">
@@ -341,8 +364,8 @@ export default function KanbanBoard({
       {view === "kanban" ? (
         <div
           className={[
-            "-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain px-4 pb-2 touch-pan-x scroll-px-4",
-            "md:mx-0 md:snap-none md:px-0 md:pb-0 md:touch-auto md:scroll-px-0"
+            "-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain px-4 pb-2 touch-pan-x scroll-px-4 scroll-smooth",
+            "md:mx-0 md:snap-none md:px-0 md:pb-4 md:touch-auto md:scroll-px-0 w-full"
           ].join(" ")}
         >
           {visibleColumns.map((col) => {
@@ -450,6 +473,22 @@ export default function KanbanBoard({
           try {
             await addComment(taskId, content)
             toast.success("Comentario agregado")
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Error")
+          }
+        }}
+        onAddAttachment={async (taskId, formData) => {
+          try {
+            await addAttachment(taskId, formData)
+            toast.success("Archivo adjunto")
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Error")
+          }
+        }}
+        onDeleteAttachment={async (taskId, attachmentId) => {
+          try {
+            await deleteAttachment(taskId, attachmentId)
+            toast.success("Adjunto eliminado")
           } catch (e) {
             toast.error(e instanceof Error ? e.message : "Error")
           }

@@ -19,7 +19,6 @@ function CloseIcon(props: SVGProps<SVGSVGElement>) {
 function DashboardShellInner({ user, children }: { user: SessionUser; children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
-  const mainScrollRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -33,13 +32,10 @@ function DashboardShellInner({ user, children }: { user: SessionUser; children: 
     document.addEventListener("keydown", onKeyDown)
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
-    const previousMainOverflow = mainScrollRef.current?.style.overflowY
-    if (mainScrollRef.current) mainScrollRef.current.style.overflowY = "hidden"
 
     return () => {
       document.removeEventListener("keydown", onKeyDown)
       document.body.style.overflow = previousOverflow
-      if (mainScrollRef.current) mainScrollRef.current.style.overflowY = previousMainOverflow ?? ""
     }
   }, [menuOpen])
 
@@ -53,12 +49,7 @@ function DashboardShellInner({ user, children }: { user: SessionUser; children: 
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar user={user} onOpenMenu={() => setMenuOpen(true)} />
-        <main
-          ref={(el) => {
-            mainScrollRef.current = el
-          }}
-          className="min-h-0 flex-1 overflow-y-auto"
-        >
+        <main className="flex-1">
           <div className="p-4 md:p-6">
             <div className="min-w-0 w-full">{children}</div>
           </div>

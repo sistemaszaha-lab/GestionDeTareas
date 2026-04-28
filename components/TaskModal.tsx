@@ -38,6 +38,7 @@ type TaskWithRelations = {
   dueDate: string | Date | null
   assignedTo: UserLite
   comments: CommentWithUser[]
+  attachments?: any[] | null
 }
 
 type CurrentUser = { id: string; role: "ADMIN" | "USER" }
@@ -81,6 +82,8 @@ export default function TaskModal(props: {
   ) => Promise<void>
   onDelete?: (id: string) => Promise<void>
   onAddComment?: (taskId: string, content: string) => Promise<void>
+  onAddAttachment?: (taskId: string, formData: FormData) => Promise<void>
+  onDeleteAttachment?: (taskId: string, attachmentId: string) => Promise<void>
 }) {
   const { open, mode, task, users, currentUser, onClose } = props
 
@@ -99,6 +102,12 @@ export default function TaskModal(props: {
   const [comment, setComment] = useState("")
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  const [uploadMode, setUploadMode] = useState<"file" | "link" | null>(null)
+  const [fileToUpload, setFileToUpload] = useState<File | null>(null)
+  const [linkUrl, setLinkUrl] = useState("")
+  const [linkName, setLinkName] = useState("")
+  const [attaching, setAttaching] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -179,6 +188,41 @@ export default function TaskModal(props: {
       setComment("")
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function addAttachment() {
+    if (!task || !props.onAddAttachment) return
+    if (uploadMode === "file" && !fileToUpload) return
+    if (uploadMode === "link" && (!linkUrl || !linkName)) return
+
+    setAttaching(true)
+    try {
+      const formData = new FormData()
+      if (uploadMode === "file" && fileToUpload) {
+        formData.append("file", fileToUpload)
+      } else {
+        formData.append("url", linkUrl)
+        formData.append("name", linkName)
+      }
+      await props.onAddAttachment(task.id, formData)
+      setFileToUpload(null)
+      setLinkUrl("")
+      setLinkName("")
+      setUploadMode(null)
+    } finally {
+      setAttaching(false)
+    }
+  }
+
+  async function removeAttachment(attachmentId: string) {
+    if (!task || !props.onDeleteAttachment) return
+    if (!confirm("¿Eliminar archivo adjunto?")) return
+    setAttaching(true)
+    try {
+      await props.onDeleteAttachment(task.id, attachmentId)
+    } finally {
+      setAttaching(false)
     }
   }
 
@@ -350,6 +394,81 @@ export default function TaskModal(props: {
                   onChange={(e) => setDescription(e.target.value)}
                   disabled={!canAdmin}
                 />
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4 pb-2 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Archivos adjuntos</div>
+                {!uploadMode && canEditStatus ? (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setUploadMode("file")}>
+                      Subir archivo
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setUploadMode("link")}>
+                      Añadir enlace
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+
+              {uploadMode === "file" ? (
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 bg-slate-50 dark:bg-slate-950/40">
+                  <Label>Seleccionar archivo (Max 5MB)</Label>
+                  <Input type="file" onChange={(e) => setFileToUpload(e.target.files?.[0] ?? null)} />
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" size="sm" onClick={() => { setUploadMode(null); setFileToUpload(null) }}>Cancelar</Button>
+                    <Button size="sm" onClick={addAttachment} disabled={!fileToUpload || attaching}>
+                      {attaching ? "Subiendo..." : "Guardar"}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {uploadMode === "link" ? (
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 bg-slate-50 dark:bg-slate-950/40">
+                  <div className="space-y-2">
+                    <Label>URL del enlace</Label>
+                    <Input placeholder="https://..." value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nombre a mostrar</Label>
+                    <Input placeholder="Documento de Google" value={linkName} onChange={(e) => setLinkName(e.target.value)} />
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" size="sm" onClick={() => { setUploadMode(null); setLinkUrl(""); setLinkName("") }}>Cancelar</Button>
+                    <Button size="sm" onClick={addAttachment} disabled={!linkUrl || !linkName || attaching}>
+                      {attaching ? "Guardando..." : "Guardar"}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {(!task.attachments || task.attachments.length === 0) && !uploadMode ? (
+                  <div className="text-xs text-slate-500 col-span-2">No hay archivos adjuntos.</div>
+                ) : (
+                  (task.attachments || []).map((att: any) => (
+                    <div key={att.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="flex-shrink-0 text-xl">
+                          {att.type === "link" ? "🔗" : att.fileType?.includes("pdf") ? "📄" : att.fileType?.includes("image") ? "🖼️" : "📁"}
+                        </div>
+                        <div className="min-w-0">
+                          <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:underline truncate block">
+                            {att.name}
+                          </a>
+                          <div className="text-[10px] text-slate-500 uppercase">{att.type}</div>
+                        </div>
+                      </div>
+                      {canEditStatus ? (
+                        <button onClick={() => removeAttachment(att.id)} disabled={attaching} className="text-slate-400 hover:text-rose-500 p-1">
+                          ✕
+                        </button>
+                      ) : null}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 

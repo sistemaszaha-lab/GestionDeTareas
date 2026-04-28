@@ -94,6 +94,7 @@ model Task {
   assignedToId String
   dueDate      DateTime?
   tags         String[]   @default([])
+  attachments  Json?      @default("[]")
   createdAt    DateTime   @default(now())
 
   assignedTo User      @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: Restrict)
