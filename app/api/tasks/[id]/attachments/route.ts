@@ -8,6 +8,15 @@ import crypto from "crypto";
 
 export const runtime = "nodejs";
 
+type Attachment = {
+  id: string
+  name: string
+  url: string
+  type: "file" | "link"
+  fileType?: string
+  createdAt: string
+}
+
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireSession(req);
@@ -66,8 +75,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       return jsonError("Datos inválidos", 400);
     }
 
-    const currentAttachments = Array.isArray(task.attachments) ? task.attachments : [];
-    const updatedAttachments = [...currentAttachments, newAttachment];
+    const currentAttachments = Array.isArray(task.attachments) ? (task.attachments as Attachment[]) : [];
+    const updatedAttachments = [...currentAttachments, newAttachment as Attachment];
 
     await prisma.task.update({
       where: { id: taskId },

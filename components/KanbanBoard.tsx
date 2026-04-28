@@ -272,8 +272,8 @@ export default function KanbanBoard({
       { method: "DELETE" },
       { defaultError: "No se pudo eliminar adjunto", logTag: "DELETE /api/tasks/:id/attachments/:attachmentId" }
     )
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, attachments: (t.attachments || []).filter((a: any) => a.id !== attachmentId) } : t)))
-    setActiveTask((prev) => (prev?.id === taskId ? { ...prev, attachments: (prev.attachments || []).filter((a: any) => a.id !== attachmentId) } : prev))
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, attachments: (t.attachments || []).filter((a) => a.id !== attachmentId) } : t)))
+    setActiveTask((prev) => (prev?.id === taskId ? { ...prev, attachments: (prev.attachments || []).filter((a) => a.id !== attachmentId) } : prev))
   }
 
   return (

@@ -28,6 +28,15 @@ type CommentWithUser = {
   user: { id: string; name: string; username: string }
 }
 
+type Attachment = {
+  id: string
+  name: string
+  url: string
+  type: "file" | "link"
+  fileType?: string
+  createdAt: string
+}
+
 type TaskWithRelations = {
   id: string
   title: string
@@ -38,7 +47,7 @@ type TaskWithRelations = {
   dueDate: string | Date | null
   assignedTo: UserLite
   comments: CommentWithUser[]
-  attachments?: any[] | null
+  attachments?: Attachment[] | null
 }
 
 type CurrentUser = { id: string; role: "ADMIN" | "USER" }
@@ -448,7 +457,7 @@ export default function TaskModal(props: {
                 {(!task.attachments || task.attachments.length === 0) && !uploadMode ? (
                   <div className="text-xs text-slate-500 col-span-2">No hay archivos adjuntos.</div>
                 ) : (
-                  (task.attachments || []).map((att: any) => (
+                  (task.attachments || []).map((att: Attachment) => (
                     <div key={att.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40">
                       <div className="flex items-center gap-3 overflow-hidden">
                         <div className="flex-shrink-0 text-xl">

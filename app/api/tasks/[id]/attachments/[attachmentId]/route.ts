@@ -7,6 +7,13 @@ import path from "path";
 
 export const runtime = "nodejs";
 
+type Attachment = {
+  id: string
+  name: string
+  url: string
+  type: "file" | "link"
+}
+
 export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string, attachmentId: string }> }) {
   try {
     const user = await requireSession(req);
@@ -19,15 +26,15 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
     const canEdit = user.role === "ADMIN" || task.assignedToId === user.id;
     if (!canEdit) return jsonError("No tienes permisos para modificar esta tarea", 403);
 
-    const currentAttachments = Array.isArray(task.attachments) ? task.attachments : [];
-    const attachmentToDelete = currentAttachments.find((a: any) => a.id === attachmentId);
+    const attachments = Array.isArray(task.attachments) ? (task.attachments as Attachment[]) : [];
+    const attachmentToDelete = attachments.find((a) => a.id === attachmentId);
 
     if (!attachmentToDelete) {
       return jsonError("Adjunto no encontrado", 404);
     }
 
     // Opcional: borrar el archivo físico
-    if (attachmentToDelete.type === "file") {
+    if (attachmentToDelete?.type === "file") {
       const filename = path.basename(attachmentToDelete.url);
       const filepath = path.join(process.cwd(), "public", "uploads", filename);
       try {
@@ -37,7 +44,7 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
       }
     }
 
-    const updatedAttachments = currentAttachments.filter((a: any) => a.id !== attachmentId);
+    const updatedAttachments = attachments.filter((a) => a.id !== attachmentId);
 
     await prisma.task.update({
       where: { id: taskId },
