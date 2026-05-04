@@ -73,6 +73,7 @@ model Task {
   createdAt     DateTime     @default(now())
   tags          String[]     @default([])
   attachments   Json?        @default("[]")
+  reminderSent  Boolean      @default(false)
   comments      Comment[]
   assignedUsers User[]       @relation("TaskAssignedUsers")
 
