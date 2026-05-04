@@ -1,13 +1,14 @@
 import { prisma } from "@/lib/prisma"
 import { jsonError, jsonException, jsonOk } from "@/lib/http"
-import { requireSession } from "@/lib/server-auth"
 
 export const runtime = "nodejs"
 
 export async function GET(req: Request) {
   try {
-    const user = await requireSession(req)
-    if (!user) return jsonError("Unauthorized", 401)
+    const authHeader = req.headers.get("authorization")
+    if (authHeader !== `Bearer ${process.env.N8N_API_SECRET}`) {
+      return jsonError("Unauthorized", 401)
+    }
 
     // Calculate time threshold: today or tomorrow (end of tomorrow)
     const now = new Date()
@@ -23,11 +24,7 @@ export async function GET(req: Request) {
         reminderSent: false,
         dueDate: {
           lte: endOfTomorrow
-        },
-        // Only return assigned tasks if not admin, or keep it system-wide for n8n?
-        // User request says "n8n", which usually implies a system job.
-        // However, I'll keep the session check but allow ADMIN to see everything.
-        ...(user.role !== "ADMIN" ? { assignedUsers: { some: { id: user.id } } } : {})
+        }
       },
       include: {
         assignedUsers: {
