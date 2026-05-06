@@ -5,7 +5,11 @@ import { AUTH_COOKIE_NAME, verifyAuthToken } from "@/lib/auth"
 
 const PUBLIC_PATHS = ["/login"]
 const PUBLIC_EXTRA_PATHS = ["/complete-profile"]
-const PUBLIC_API_PREFIXES = ["/api/auth"]
+const PUBLIC_API_PREFIXES = [
+  "/api/auth",
+  "/api/debug",
+  "/api/tasks/reminders"
+]
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
