@@ -66,6 +66,7 @@ model VerificationToken {
 model Task {
   id            String       @id @default(cuid())
   title         String
+  reminderSent  Boolean      @default(false)
   description   String?
   status        TaskStatus   @default(PENDING)
   priority      TaskPriority @default(MEDIUM)
@@ -73,7 +74,6 @@ model Task {
   createdAt     DateTime     @default(now())
   tags          String[]     @default([])
   attachments   Json?        @default("[]")
-  reminderSent  Boolean      @default(false)
   comments      Comment[]
   assignedUsers User[]       @relation("TaskAssignedUsers")
 
