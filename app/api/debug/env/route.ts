@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   }
 
   if (authHeader !== `Bearer ${process.env.N8N_API_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return NextResponse.json({ TEST: "SI VES ESTO YA CAMBIO EL DEPLOY" }, { status: 401 })
   }
 
   return NextResponse.json({ hasSecret: true }, { status: 200 })
