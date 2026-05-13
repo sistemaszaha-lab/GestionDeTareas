@@ -31,13 +31,17 @@ export default function KanbanBoard({
   users,
   initialTasks,
   forceUserId,
-  pageTitle
+  pageTitle,
+  dashboardMode,
+  emptyState
 }: {
   currentUser: CurrentUser
   users: UserLite[]
   initialTasks: TaskWithRelations[]
   forceUserId?: string
   pageTitle?: string
+  dashboardMode?: "default" | "userDaily"
+  emptyState?: { title: string; description?: string }
 }) {
   const router = useRouter()
   const [tasks, setTasks] = useState<TaskWithRelations[]>(initialTasks)
@@ -282,18 +286,22 @@ export default function KanbanBoard({
       <div className="space-y-2">
         <div className="space-y-1">
           <h1 className="text-xl font-semibold tracking-[-0.02em] text-slate-900 dark:text-slate-50">{pageTitle || "Tareas"}</h1>
-          <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-            <span>Resumen:</span>
-            <Badge variant="secondary">Total {totalCount}</Badge>
-            <Badge variant="outline">Pendientes {pendingCount}</Badge>
-            <Badge variant="outline">Completadas {doneCount}</Badge>
-            <Badge variant={overdueCount ? "danger" : "outline"}>Vencidas {overdueCount}</Badge>
-          </div>
+          {dashboardMode !== "userDaily" ? (
+            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <span>Resumen:</span>
+              <Badge variant="secondary">Total {totalCount}</Badge>
+              <Badge variant="outline">Pendientes {pendingCount}</Badge>
+              <Badge variant="outline">Completadas {doneCount}</Badge>
+              <Badge variant={overdueCount ? "danger" : "outline"}>Vencidas {overdueCount}</Badge>
+            </div>
+          ) : null}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <ViewSelector value={view} onChange={setView} />
-        </div>
+        {dashboardMode !== "userDaily" ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <ViewSelector value={view} onChange={setView} />
+          </div>
+        ) : null}
 
         <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40">
           <CardContent className="p-4">
@@ -360,7 +368,18 @@ export default function KanbanBoard({
         </div>
       ) : null}
 
-      
+      {!isInitialLoading && tasks.length === 0 && emptyState ? (
+        <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40">
+          <CardHeader>
+            <CardTitle className="text-base">{emptyState.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {emptyState.description ? <p className="text-sm text-slate-600 dark:text-slate-400">{emptyState.description}</p> : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
+       
 
       {view === "kanban" ? (
         <div

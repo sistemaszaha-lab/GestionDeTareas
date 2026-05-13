@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { jsonError, jsonException, jsonOk } from "@/lib/http"
 import { requireSession } from "@/lib/server-auth"
+import { isAdmin, taskByIdWhere } from "@/lib/task-permissions"
 import { updateTaskSchema } from "@/lib/validators"
 import type { NextRequest } from "next/server"
 
@@ -19,8 +20,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     if (!user) return jsonError("Unauthorized", 401)
 
     const { id } = await Promise.resolve(ctx.params)
-    const existing = await prisma.task.findUnique({ 
-      where: { id },
+    const existing = await prisma.task.findFirst({
+      where: taskByIdWhere(user, id),
       include: { assignedUsers: { select: { id: true } } }
     })
     if (!existing) return jsonError("No encontrada", 404)
@@ -29,8 +30,9 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     const parsed = updateTaskSchema.safeParse(body)
     if (!parsed.success) return jsonError("Datos inválidos", 400)
 
-    const canEditAll = user.role === "ADMIN"
+    const canEditAll = isAdmin(user)
     const isAssignee = existing.assignedUsers.some((u: any) => u.id === user.id)
+    // NOTE: `existing` is already scoped for USER, but keep this guard for safety.
     if (!canEditAll && !isAssignee) return jsonError("Forbidden", 403)
 
     const attemptedAssigneeChange = parsed.data.assignedUserIds && JSON.stringify(parsed.data.assignedUserIds.sort()) !== JSON.stringify(existing.assignedUsers.map((u: any) => u.id).sort())

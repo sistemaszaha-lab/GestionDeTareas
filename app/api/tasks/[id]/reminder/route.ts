@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { jsonError, jsonException, jsonOk } from "@/lib/http"
 import { requireSession } from "@/lib/server-auth"
+import { isAdmin, taskByIdWhere } from "@/lib/task-permissions"
 import type { NextRequest } from "next/server"
 
 export const runtime = "nodejs"
@@ -11,15 +12,15 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     if (!user) return jsonError("Unauthorized", 401)
 
     const { id } = await Promise.resolve(ctx.params)
-    const existing = await prisma.task.findUnique({
-      where: { id },
+    const existing = await prisma.task.findFirst({
+      where: taskByIdWhere(user, id),
       include: { assignedUsers: { select: { id: true } } }
     })
 
     if (!existing) return jsonError("Tarea no encontrada", 404)
 
     // Check permissions: Admin or assigned user
-    const canUpdate = user.role === "ADMIN" || existing.assignedUsers.some(u => u.id === user.id)
+    const canUpdate = isAdmin(user) || existing.assignedUsers.some(u => u.id === user.id)
     if (!canUpdate) return jsonError("Forbidden", 403)
 
     const task = await prisma.task.update({

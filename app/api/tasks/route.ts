@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { jsonError, jsonException, jsonOk } from "@/lib/http"
 import { requireSession } from "@/lib/server-auth"
+import { taskScopeWhere } from "@/lib/task-permissions"
 import { createTaskSchema } from "@/lib/validators"
 import { Prisma } from "@prisma/client"
 
@@ -40,6 +41,7 @@ export async function GET(req: Request) {
 
     const tasks = await prisma.task.findMany({
       where: {
+        ...taskScopeWhere(user),
         ...(assignedToId ? { assignedUsers: { some: { id: assignedToId } } } : {}),
         ...(status ? { status: status as any } : {}),
         ...(priority ? { priority: priority as any } : {})
