@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import toast from "react-hot-toast"
 import type { TaskPriority, TaskStatus, UserRole } from "@prisma/client"
 import {
   Dialog,
@@ -19,6 +20,21 @@ import { Badge } from "@/components/shadcn/ui/badge"
 import { Card, CardContent } from "@/components/shadcn/ui/card"
 import { cn } from "@/lib/ui"
 import { MultiSelect } from "@/components/ui/MultiSelect"
+import { 
+  Paperclip, 
+  Link2, 
+  Calendar, 
+  AlertCircle, 
+  Trash2, 
+  Save, 
+  MessageSquare, 
+  Send, 
+  FileText, 
+  Image as ImageIcon, 
+  File as FileIcon,
+  Clock,
+  UserPlus
+} from "lucide-react"
 
 type UserLite = { id: string; name: string; username: string; role: UserRole }
 
@@ -178,6 +194,7 @@ export default function TaskModal(props: {
 
   async function remove() {
     if (!task || !props.onDelete) return
+    if (!confirm("¿Estás seguro de que deseas eliminar esta tarea? Esta acción no se puede deshacer.")) return
     setDeleting(true)
     try {
       await props.onDelete(task.id)
@@ -219,6 +236,9 @@ export default function TaskModal(props: {
       setLinkUrl("")
       setLinkName("")
       setUploadMode(null)
+      toast.success("Archivo adjunto guardado")
+    } catch(e) {
+      toast.error("Error al guardar archivo")
     } finally {
       setAttaching(false)
     }
@@ -230,18 +250,43 @@ export default function TaskModal(props: {
     setAttaching(true)
     try {
       await props.onDeleteAttachment(task.id, attachmentId)
+      toast.success("Archivo adjunto eliminado")
+    } catch(e) {
+      toast.error("Error al eliminar")
     } finally {
-      setAttaching(false)
+      setAttaching(true)
     }
   }
 
   const modalTitle = mode === "create" ? "Nueva tarea" : "Detalle de tarea"
 
-  const statusBadgeVariant = status === "DONE" ? "success" : status === "IN_PROGRESS" ? "default" : "secondary"
-  const priorityBadgeVariant = priority === "HIGH" ? "danger" : priority === "LOW" ? "secondary" : "outline"
-
   const dueDateObj = dueDate ? dueDateToDate(dueDate) : null
   const isOverdue = Boolean(dueDateObj && status !== "DONE" && dueDateObj.getTime() < Date.now())
+
+  // Styles maps
+  const priorityStyles = {
+    HIGH: "bg-rose-50 text-[#EF4444] border-rose-100 dark:bg-rose-950/20 dark:text-rose-450",
+    MEDIUM: "bg-amber-50 text-[#F59E0B] border-amber-100 dark:bg-amber-950/20 dark:text-amber-450",
+    LOW: "bg-[#3F9EA2]/10 text-[#3F9EA2] border-[#3F9EA2]/20 dark:bg-[#3F9EA2]/5"
+  }
+
+  const priorityLabel = {
+    HIGH: "Prioridad Alta",
+    MEDIUM: "Prioridad Media",
+    LOW: "Prioridad Baja"
+  }[priority]
+
+  const statusStyles = {
+    PENDING: "bg-[#3F9EA2]/15 text-[#3F9EA2] dark:bg-[#3F9EA2]/10",
+    IN_PROGRESS: "bg-[#016B6B]/15 text-[#016B6B] dark:bg-[#3F9EA2]/10 dark:text-[#3F9EA2]",
+    DONE: "bg-[#22C55E]/15 text-[#22C55E] dark:bg-[#22C55E]/10"
+  }
+
+  const statusLabel = {
+    PENDING: "Pendiente",
+    IN_PROGRESS: "En progreso",
+    DONE: "Completada"
+  }[status]
 
   return (
     <Dialog
@@ -250,122 +295,167 @@ export default function TaskModal(props: {
         if (!next) onClose()
       }}
     >
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{modalTitle}</DialogTitle>
+      <DialogContent className="max-w-2xl rounded-2xl border-slate-200 dark:border-slate-800 dark:bg-[#1C1D1D] p-5 md:p-6 overflow-y-auto max-h-[92vh]">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="font-poppins font-black text-xl text-slate-800 dark:text-[#F8FAFA] tracking-tight">
+            {modalTitle}
+          </DialogTitle>
           {mode === "create" ? (
-            <DialogDescription>Crea una tarea y quedará visible inmediatamente en el tablero.</DialogDescription>
+            <DialogDescription className="text-xs text-slate-500">
+              Registra los detalles iniciales para que la tarea aparezca en el panel de control.
+            </DialogDescription>
           ) : null}
         </DialogHeader>
 
         {mode === "create" ? (
-          <div className="px-6 pb-6 space-y-4">
+          <div className="space-y-4 pt-2">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="task-title">Título</Label>
-                <Input id="task-title" value={title} onChange={(e) => setTitle(e.target.value)} />
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="task-title" className="text-xs font-semibold text-slate-500">Título de la tarea</Label>
+                <Input 
+                  id="task-title" 
+                  value={title} 
+                  onChange={(e) => setTitle(e.target.value)} 
+                  placeholder="Ej. Rediseñar panel de control..."
+                  className="h-10 rounded-xl"
+                />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="task-description">Descripción</Label>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="task-description" className="text-xs font-semibold text-slate-500">Descripción u objetivos</Label>
                 <Textarea
                   id="task-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Agrega contexto, criterios de aceptación, links…"
+                  placeholder="Detalla los requisitos de la tarea, enlaces o notas..."
+                  className="rounded-xl min-h-[100px] resize-none"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="task-priority">Prioridad</Label>
-                <ShadcnSelect id="task-priority" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
+              <div className="space-y-1.5">
+                <Label htmlFor="task-priority" className="text-xs font-semibold text-slate-500">Prioridad</Label>
+                <ShadcnSelect id="task-priority" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} className="h-10 rounded-xl">
                   <option value="LOW">Baja</option>
                   <option value="MEDIUM">Media</option>
                   <option value="HIGH">Alta</option>
                 </ShadcnSelect>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="task-due">Vence el</Label>
-                <Input id="task-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              <div className="space-y-1.5">
+                <Label htmlFor="task-due" className="text-xs font-semibold text-slate-500">Fecha límite</Label>
+                <Input id="task-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-10 rounded-xl" />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="task-assigned">Asignar a</Label>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="task-assigned" className="text-xs font-semibold text-slate-500">Miembros asignados</Label>
                 <MultiSelect
                   options={users}
                   selected={assignedUserIds}
                   onChange={setAssignedUserIds}
-                  placeholder="Seleccionar usuarios..."
+                  placeholder="Selecciona uno o más encargados..."
                 />
               </div>
             </div>
 
-            <DialogFooter className="px-0">
-              <Button variant="outline" onClick={onClose} disabled={saving}>
+            <DialogFooter className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={onClose} 
+                disabled={saving}
+                className="h-10 rounded-xl border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900 font-poppins text-xs font-medium"
+              >
                 Cancelar
               </Button>
-              <Button onClick={create} disabled={saving || !title.trim()}>
-                {saving ? "Creando…" : "Crear"}
+              <Button 
+                onClick={create} 
+                disabled={saving || !title.trim()}
+                className="h-10 rounded-xl bg-[#016B6B] hover:bg-[#3F9EA2] text-white active:scale-[0.98] transition-all font-poppins text-xs font-semibold px-5 shadow-sm shadow-[#016B6B]/15"
+              >
+                {saving ? "Creando…" : "Crear Tarea"}
               </Button>
             </DialogFooter>
           </div>
         ) : task ? (
-          <div className="px-6 pb-6 space-y-6">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={priorityBadgeVariant as any}>{priority}</Badge>
-              <Badge variant={statusBadgeVariant as any}>{status}</Badge>
-              <div className="flex -space-x-2 overflow-hidden ml-1">
+          <div className="space-y-5 pt-1">
+            
+            {/* Action Meta Info Header */}
+            <div className="flex flex-wrap items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800/80">
+              <Badge className={cn("text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border-0 shadow-none", priorityStyles[priority])}>
+                {priorityLabel}
+              </Badge>
+              <Badge className={cn("text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border-0 shadow-none", statusStyles[status])}>
+                {statusLabel}
+              </Badge>
+              <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 ml-1" />
+              
+              <div className="flex -space-x-1.5 overflow-hidden ml-1">
                 {task.assignedUsers.map((u) => (
                   <div
                     key={u.id}
                     title={u.name}
-                    className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-slate-900 bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold uppercase"
+                    className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#1C1D1D] bg-slate-200 text-slate-700 dark:bg-slate-850 dark:text-slate-300 flex items-center justify-center text-[9px] font-bold uppercase"
                   >
                     {u.name.slice(0, 2)}
                   </div>
                 ))}
               </div>
-              <span className="text-xs text-slate-600 dark:text-slate-400">
-                {task.assignedUsers.length > 1 ? `${task.assignedUsers.length} asignados` : task.assignedUsers[0]?.name || "Sin asignar"}
+              
+              <span className="text-[11px] font-medium text-slate-500">
+                {task.assignedUsers.length > 0 ? (
+                  <span>Asignados: {task.assignedUsers.map(u => u.name).join(", ")}</span>
+                ) : (
+                  <span className="text-amber-500 font-semibold flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Sin asignar</span>
+                )}
               </span>
+
               {dueDateObj ? (
                 <span
                   className={cn(
-                    "text-xs",
-                    isOverdue ? "text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-slate-400"
+                    "text-[11px] font-semibold flex items-center gap-1 ml-auto",
+                    isOverdue ? "text-rose-600 dark:text-rose-450" : "text-slate-500"
                   )}
                 >
-                  {isOverdue ? "Vencida: " : "Vence: "}
-                  {dueDateObj.toLocaleDateString("es-MX")}
+                  {isOverdue ? <AlertCircle className="h-3 w-3" /> : <Calendar className="h-3.5 w-3.5" />}
+                  <span>{isOverdue ? "Vencida el: " : "Vence el: "} {dueDateObj.toLocaleDateString("es-MX")}</span>
                 </span>
               ) : (
-                <span className="text-xs text-slate-500 dark:text-slate-400">Sin vencimiento</span>
+                <span className="text-[11px] text-slate-400 ml-auto">Sin fecha límite</span>
               )}
             </div>
 
+            {/* Fields grid */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="detail-title">Título</Label>
-                <Input id="detail-title" value={title} onChange={(e) => setTitle(e.target.value)} disabled={!canAdmin} />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="detail-assigned">Asignados</Label>
-                <MultiSelect
-                  options={users}
-                  selected={assignedUserIds}
-                  onChange={setAssignedUserIds}
+              
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="detail-title" className="text-xs font-semibold text-slate-500">Título de la tarea</Label>
+                <Input 
+                  id="detail-title" 
+                  value={title} 
+                  onChange={(e) => setTitle(e.target.value)} 
+                  disabled={!canAdmin}
+                  className="h-10 rounded-xl"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="detail-status">Estado</Label>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="detail-assigned" className="text-xs font-semibold text-slate-500">Miembros asignados</Label>
+                <div className={!canAdmin ? "pointer-events-none opacity-60" : ""}>
+                  <MultiSelect
+                    options={users}
+                    selected={assignedUserIds}
+                    onChange={setAssignedUserIds}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="detail-status" className="text-xs font-semibold text-slate-500">Estado actual</Label>
                 <ShadcnSelect
                   id="detail-status"
                   value={status}
                   onChange={(e) => setStatus(e.target.value as TaskStatus)}
                   disabled={!canEditStatus}
+                  className="h-10 rounded-xl"
                 >
                   <option value="PENDING">Pendiente</option>
                   <option value="IN_PROGRESS">En progreso</option>
@@ -373,13 +463,14 @@ export default function TaskModal(props: {
                 </ShadcnSelect>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="detail-priority">Prioridad</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="detail-priority" className="text-xs font-semibold text-slate-500">Prioridad</Label>
                 <ShadcnSelect
                   id="detail-priority"
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as TaskPriority)}
                   disabled={!canAdmin}
+                  className="h-10 rounded-xl"
                 >
                   <option value="LOW">Baja</option>
                   <option value="MEDIUM">Media</option>
@@ -387,37 +478,53 @@ export default function TaskModal(props: {
                 </ShadcnSelect>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="detail-due">Vence el</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="detail-due" className="text-xs font-semibold text-slate-500">Modificar Vencimiento</Label>
                 <Input
                   id="detail-due"
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                   disabled={!canAdmin}
+                  className="h-10 rounded-xl"
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="detail-description">Descripción</Label>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="detail-description" className="text-xs font-semibold text-slate-500">Descripción detallada</Label>
                 <Textarea
                   id="detail-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   disabled={!canAdmin}
+                  className="rounded-xl min-h-[90px] resize-none"
                 />
               </div>
             </div>
 
-            <div className="space-y-4 pt-4 pb-2 border-t border-slate-200 dark:border-slate-800">
+            {/* Attachments Section */}
+            <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Archivos adjuntos</div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Paperclip className="h-3.5 w-3.5" />
+                  <span>Archivos adjuntos</span>
+                </div>
                 {!uploadMode && canEditStatus ? (
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setUploadMode("file")}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setUploadMode("file")}
+                      className="h-8 rounded-lg text-[10px] font-bold border-slate-200 dark:border-slate-800 hover:bg-[#016B6B]/5 hover:text-[#016B6B]"
+                    >
                       Subir archivo
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setUploadMode("link")}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setUploadMode("link")}
+                      className="h-8 rounded-lg text-[10px] font-bold border-slate-200 dark:border-slate-800 hover:bg-[#016B6B]/5 hover:text-[#016B6B]"
+                    >
                       Añadir enlace
                     </Button>
                   </div>
@@ -425,31 +532,31 @@ export default function TaskModal(props: {
               </div>
 
               {uploadMode === "file" ? (
-                <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 bg-slate-50 dark:bg-slate-950/40">
-                  <Label>Seleccionar archivo (Max 5MB)</Label>
-                  <Input type="file" onChange={(e) => setFileToUpload(e.target.files?.[0] ?? null)} />
+                <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800/80 p-3.5 space-y-3 bg-slate-50/50 dark:bg-slate-900/10">
+                  <Label className="text-xs font-medium text-slate-500">Seleccionar archivo (Máx 5MB)</Label>
+                  <Input type="file" onChange={(e) => setFileToUpload(e.target.files?.[0] ?? null)} className="h-9.5 text-xs" />
                   <div className="flex gap-2 justify-end">
-                    <Button variant="outline" size="sm" onClick={() => { setUploadMode(null); setFileToUpload(null) }}>Cancelar</Button>
-                    <Button size="sm" onClick={addAttachment} disabled={!fileToUpload || attaching}>
-                      {attaching ? "Subiendo..." : "Guardar"}
+                    <Button variant="outline" size="sm" onClick={() => { setUploadMode(null); setFileToUpload(null) }} className="h-8 rounded-lg text-xs font-semibold">Cancelar</Button>
+                    <Button size="sm" onClick={addAttachment} disabled={!fileToUpload || attaching} className="h-8 rounded-lg bg-[#016B6B] hover:bg-[#3F9EA2] text-white text-xs font-semibold px-4">
+                      {attaching ? "Subiendo..." : "Subir"}
                     </Button>
                   </div>
                 </div>
               ) : null}
 
               {uploadMode === "link" ? (
-                <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 bg-slate-50 dark:bg-slate-950/40">
-                  <div className="space-y-2">
-                    <Label>URL del enlace</Label>
-                    <Input placeholder="https://..." value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} />
+                <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800/80 p-3.5 space-y-3 bg-slate-50/50 dark:bg-slate-900/10">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-500">Dirección URL</Label>
+                    <Input placeholder="https://ejemplo.com/recurso" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} className="h-9 text-xs" />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Nombre a mostrar</Label>
-                    <Input placeholder="Documento de Google" value={linkName} onChange={(e) => setLinkName(e.target.value)} />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-500">Nombre identificador</Label>
+                    <Input placeholder="Ej. Diseño Figma" value={linkName} onChange={(e) => setLinkName(e.target.value)} className="h-9 text-xs" />
                   </div>
                   <div className="flex gap-2 justify-end">
-                    <Button variant="outline" size="sm" onClick={() => { setUploadMode(null); setLinkUrl(""); setLinkName("") }}>Cancelar</Button>
-                    <Button size="sm" onClick={addAttachment} disabled={!linkUrl || !linkName || attaching}>
+                    <Button variant="outline" size="sm" onClick={() => { setUploadMode(null); setLinkUrl(""); setLinkName("") }} className="h-8 rounded-lg text-xs font-semibold">Cancelar</Button>
+                    <Button size="sm" onClick={addAttachment} disabled={!linkUrl || !linkName || attaching} className="h-8 rounded-lg bg-[#016B6B] hover:bg-[#3F9EA2] text-white text-xs font-semibold px-4">
                       {attaching ? "Guardando..." : "Guardar"}
                     </Button>
                   </div>
@@ -458,80 +565,140 @@ export default function TaskModal(props: {
 
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {(!task.attachments || task.attachments.length === 0) && !uploadMode ? (
-                  <div className="text-xs text-slate-500 col-span-2">No hay archivos adjuntos.</div>
+                  <div className="text-xs text-slate-400 text-center py-4 bg-slate-50/30 border border-dashed border-slate-200 rounded-xl col-span-2 dark:border-slate-800/40">
+                    No hay archivos adjuntos en esta tarea.
+                  </div>
                 ) : (
-                  (task.attachments || []).map((att: Attachment) => (
-                    <div key={att.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="flex-shrink-0 text-xl">
-                          {att.type === "link" ? "🔗" : att.fileType?.includes("pdf") ? "📄" : att.fileType?.includes("image") ? "🖼️" : "📁"}
+                  (task.attachments || []).map((att: Attachment) => {
+                    const isImg = att.fileType?.includes("image")
+                    const isPdf = att.fileType?.includes("pdf")
+                    const Icon = att.type === "link" ? Link2 : isPdf ? FileText : isImg ? ImageIcon : FileIcon
+
+                    return (
+                      <div key={att.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/30 transition-colors hover:border-[#016B6B]/20">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[#016B6B] dark:bg-slate-800/60 dark:text-[#3F9EA2]">
+                            <Icon className="h-4.5 w-4.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <a 
+                              href={att.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-xs font-bold hover:text-[#016B6B] dark:hover:text-[#3F9EA2] truncate block"
+                            >
+                              {att.name}
+                            </a>
+                            <div className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">{att.type}</div>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:underline truncate block">
-                            {att.name}
-                          </a>
-                          <div className="text-[10px] text-slate-500 uppercase">{att.type}</div>
-                        </div>
+                        {canEditStatus ? (
+                          <button 
+                            onClick={() => removeAttachment(att.id)} 
+                            disabled={attaching} 
+                            className="text-slate-400 hover:text-rose-500 p-1 bg-transparent border-0 hover:bg-rose-50 rounded-md transition-colors"
+                          >
+                            ✕
+                          </button>
+                        ) : null}
                       </div>
-                      {canEditStatus ? (
-                        <button onClick={() => removeAttachment(att.id)} disabled={attaching} className="text-slate-400 hover:text-rose-500 p-1">
-                          ✕
-                        </button>
-                      ) : null}
-                    </div>
-                  ))
+                    )
+                  })
                 )}
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-xs text-slate-600 dark:text-slate-400">Comentarios ({task.comments.length})</div>
-              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
-                {canAdmin ? (
-                  <Button variant="danger" onClick={remove} disabled={deleting} className="w-full sm:w-auto">
-                    {deleting ? "Eliminando…" : "Eliminar"}
-                  </Button>
-                ) : null}
-                <Button onClick={save} disabled={saving} className="w-full sm:w-auto">
-                  {saving ? "Guardando…" : "Guardar"}
-                </Button>
+            {/* Comments Feed Area */}
+            <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <MessageSquare className="h-3.5 w-3.5" />
+                <span>Comentarios ({task.comments.length})</span>
               </div>
-            </div>
-
-            <div className="max-h-64 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 space-y-2">
-              {task.comments.length === 0 ? (
-                <div className="text-xs text-slate-600 dark:text-slate-400">Sin comentarios</div>
-              ) : (
-                task.comments.map((c) => (
-                  <Card key={c.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-xs font-medium text-slate-900 dark:text-slate-50">{c.user.name}</div>
-                        <div className="text-[11px] text-slate-600 dark:text-slate-400">
-                          {new Date(c.createdAt).toLocaleString()}
+              
+              <div className="max-h-56 overflow-y-auto rounded-2xl border border-slate-200/70 bg-slate-50/40 p-3 space-y-2 dark:border-slate-800 dark:bg-slate-950/20">
+                {task.comments.length === 0 ? (
+                  <div className="text-xs text-slate-400 text-center py-6">Aún no hay comentarios. Escribe uno abajo para iniciar la conversación.</div>
+                ) : (
+                  task.comments.map((c) => (
+                    <Card key={c.id} className="border-0 shadow-none bg-white dark:bg-[#1C1D1D] rounded-xl border border-slate-200/50 dark:border-slate-800/40">
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-[11px] font-bold text-[#016B6B] dark:text-[#3F9EA2]">{c.user.name}</div>
+                          <div className="text-[9px] text-slate-400 font-semibold">
+                            {new Date(c.createdAt).toLocaleDateString("es-MX", { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </div>
                         </div>
-                      </div>
-                      <div className="mt-2 text-sm text-slate-900 dark:text-slate-50 whitespace-pre-wrap">{c.content}</div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
+                        <p className="mt-1.5 text-xs text-slate-700 dark:text-slate-350 leading-relaxed whitespace-pre-wrap">
+                          {c.content}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
-              <div className="space-y-2">
-                <Label htmlFor="new-comment">Agregar comentario</Label>
+              {/* Add comment input */}
+              <div className="flex gap-2 items-center">
                 <Input
                   id="new-comment"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  placeholder="Escribe un comentario…"
+                  placeholder="Agregar un comentario público..."
+                  className="h-10 rounded-xl"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault()
+                      void addComment()
+                    }
+                  }}
                 />
+                <Button 
+                  onClick={addComment} 
+                  disabled={saving || !comment.trim()} 
+                  className="h-10 rounded-xl bg-slate-100 hover:bg-[#016B6B] hover:text-white text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-[#3F9EA2] dark:hover:text-white shrink-0 font-semibold text-xs px-4"
+                >
+                  <Send className="h-3.5 w-3.5 mr-1" />
+                  <span>Enviar</span>
+                </Button>
               </div>
-              <Button onClick={addComment} disabled={saving || !comment.trim()} className="sm:mb-0">
-                {saving ? "Enviando…" : "Enviar"}
-              </Button>
             </div>
+
+            {/* Bottom Actions Row */}
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-slate-100 dark:border-slate-800/80">
+              <div>
+                {canAdmin && (
+                  <Button 
+                    variant="ghost" 
+                    onClick={remove} 
+                    disabled={deleting} 
+                    className="h-9 px-3.5 rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/20 font-poppins font-medium text-xs flex items-center gap-1.5"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Eliminar tarea</span>
+                  </Button>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={onClose} 
+                  disabled={saving}
+                  className="h-9.5 px-4 rounded-xl border-slate-200 hover:bg-slate-50 dark:border-slate-850 dark:hover:bg-slate-900 font-poppins text-xs font-semibold"
+                >
+                  Cerrar
+                </Button>
+                <Button 
+                  onClick={save} 
+                  disabled={saving} 
+                  className="h-9.5 px-5 rounded-xl bg-[#016B6B] hover:bg-[#3F9EA2] text-white font-poppins text-xs font-bold shadow-md shadow-[#016B6B]/10 flex items-center gap-1.5"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  <span>{saving ? "Guardando..." : "Guardar cambios"}</span>
+                </Button>
+              </div>
+            </div>
+
           </div>
         ) : null}
       </DialogContent>

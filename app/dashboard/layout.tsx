@@ -6,7 +6,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50">
+    <div className="min-h-screen bg-[#F8FAFA] dark:bg-[#121313] text-[#464747] dark:text-[#F8FAFA]">
       <DashboardShell user={user}>{children}</DashboardShell>
     </div>
   )

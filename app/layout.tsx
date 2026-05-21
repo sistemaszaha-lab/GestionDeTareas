@@ -26,13 +26,13 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0f172a"
+  themeColor: "#016B6B"
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body>
+      <body className="font-poppins antialiased">
         <ThemeProvider>
           <ToastProvider />
           <PwaRegister />

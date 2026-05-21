@@ -28,7 +28,6 @@ export type TaskWithRelations = {
   createdAt: string | Date
   assignedUsers: UserLite[]
   comments: CommentWithUser[]
-  tags?: string[]
   attachments?: Attachment[] | null
 }
 

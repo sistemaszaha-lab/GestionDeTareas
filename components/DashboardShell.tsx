@@ -40,9 +40,9 @@ function DashboardShellInner({ user, children }: { user: SessionUser; children: 
   }, [menuOpen])
 
   return (
-    <div className="flex min-h-screen w-full">
-      <aside className="hidden w-72 shrink-0 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 md:sticky md:top-0 md:block md:h-screen md:overflow-y-auto">
-        <div className="p-4">
+    <div className="flex min-h-screen w-full bg-[#F8FAFA] dark:bg-[#121313]">
+      <aside className="hidden w-72 shrink-0 border-r border-slate-200/60 dark:border-slate-850/60 bg-white dark:bg-[#1C1D1D] md:sticky md:top-0 md:block md:h-screen md:overflow-y-auto">
+        <div className="p-4 h-full">
           <SidebarContent user={user} />
         </div>
       </aside>
@@ -58,18 +58,18 @@ function DashboardShellInner({ user, children }: { user: SessionUser; children: 
 
       {menuOpen ? (
         <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="Menú">
-          <div className="absolute inset-0 bg-black/35" onClick={() => setMenuOpen(false)} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMenuOpen(false)} />
 
-          <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] overflow-y-auto pt-[env(safe-area-inset-top)] overscroll-contain border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4 shadow-xl">
+          <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] overflow-y-auto pt-[env(safe-area-inset-top)] overscroll-contain border-r border-slate-200/60 dark:border-slate-850/60 bg-white dark:bg-[#1C1D1D] p-4 shadow-2xl">
             <div className="mb-2 flex items-center justify-end">
               <Button
                 ref={closeButtonRef}
                 variant="ghost"
-                className="h-10 w-10 px-0"
+                className="h-10 w-10 px-0 hover:bg-[#016B6B]/5"
                 onClick={() => setMenuOpen(false)}
                 aria-label="Cerrar menú"
               >
-                <CloseIcon className="h-5 w-5" />
+                <CloseIcon className="h-5 w-5 text-[#464747] dark:text-[#F8FAFA]" />
               </Button>
             </div>
 

@@ -19,6 +19,15 @@ import TaskTableView from "@/components/tasks/TaskTableView"
 import TaskTimelineView from "@/components/tasks/TaskTimelineView"
 import type { CurrentUser, TaskWithRelations, UserLite } from "@/components/tasks/task-types"
 import { fetchJsonOrThrow } from "@/lib/fetch-json"
+import { 
+  Clock, 
+  Play, 
+  CheckCircle2, 
+  AlertCircle, 
+  RefreshCw, 
+  UserPlus, 
+  Plus
+} from "lucide-react"
 
 const columns: Array<{ key: TaskStatus; title: string }> = [
   { key: "PENDING", title: "Pendiente" },
@@ -68,8 +77,8 @@ export default function KanbanBoard({
     return currentUser.role === "ADMIN" ? filteredTasks : filteredTasks.filter((t) => t.assignedUsers.some((u) => u.id === currentUser.id))
   }, [filteredTasks, currentUser.id, currentUser.role])
 
-  const totalCount = useMemo(() => statsBase.length, [statsBase])
   const pendingCount = useMemo(() => statsBase.filter((t) => t.status === "PENDING").length, [statsBase])
+  const inProgressCount = useMemo(() => statsBase.filter((t) => t.status === "IN_PROGRESS").length, [statsBase])
   const doneCount = useMemo(() => statsBase.filter((t) => t.status === "DONE").length, [statsBase])
 
   const overdueCount = useMemo(() => {
@@ -282,35 +291,118 @@ export default function KanbanBoard({
   }
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-2">
-        <div className="space-y-1">
-          <h1 className="text-xl font-semibold tracking-[-0.02em] text-slate-900 dark:text-slate-50">{pageTitle || "Tareas"}</h1>
-          {dashboardMode !== "userDaily" ? (
-            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-              <span>Resumen:</span>
-              <Badge variant="secondary">Total {totalCount}</Badge>
-              <Badge variant="outline">Pendientes {pendingCount}</Badge>
-              <Badge variant="outline">Completadas {doneCount}</Badge>
-              <Badge variant={overdueCount ? "danger" : "outline"}>Vencidas {overdueCount}</Badge>
+    <div className="space-y-6">
+      
+      {/* KPI Cards Row */}
+      {dashboardMode !== "userDaily" ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          
+          {/* Pendientes */}
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white p-5 shadow-soft dark:border-slate-800/60 dark:bg-[#1C1D1D] transition-transform duration-200 hover:-translate-y-0.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 font-poppins uppercase tracking-wider">
+                Tareas Pendientes
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#3F9EA2]/10 text-[#3F9EA2]">
+                <Clock className="h-5 w-5" />
+              </div>
             </div>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-3xl font-poppins font-black tracking-tight text-[#464747] dark:text-[#F8FAFA]">
+                {pendingCount}
+              </span>
+              <span className="text-xs text-slate-400">asignadas</span>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#3F9EA2]" />
+          </div>
+
+          {/* En Progreso */}
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white p-5 shadow-soft dark:border-slate-800/60 dark:bg-[#1C1D1D] transition-transform duration-200 hover:-translate-y-0.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 font-poppins uppercase tracking-wider">
+                En Progreso
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#016B6B]/10 text-[#016B6B] dark:text-[#3F9EA2] dark:bg-[#3F9EA2]/10">
+                <Play className="h-5 w-5 fill-current" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-3xl font-poppins font-black tracking-tight text-[#464747] dark:text-[#F8FAFA]">
+                {inProgressCount}
+              </span>
+              <span className="text-xs text-slate-400">en desarrollo</span>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#016B6B]" />
+          </div>
+
+          {/* Completadas */}
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white p-5 shadow-soft dark:border-slate-800/60 dark:bg-[#1C1D1D] transition-transform duration-200 hover:-translate-y-0.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 font-poppins uppercase tracking-wider">
+                Completadas
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#22C55E]/10 text-[#22C55E]">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-3xl font-poppins font-black tracking-tight text-[#464747] dark:text-[#F8FAFA]">
+                {doneCount}
+              </span>
+              <span className="text-xs text-slate-400">finalizadas</span>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#22C55E]" />
+          </div>
+
+          {/* Vencidas */}
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white p-5 shadow-soft dark:border-slate-800/60 dark:bg-[#1C1D1D] transition-transform duration-200 hover:-translate-y-0.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 font-poppins uppercase tracking-wider">
+                Vencidas / Alertas
+              </span>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-[#EF4444] dark:bg-rose-950/20">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-3xl font-poppins font-black tracking-tight text-[#464747] dark:text-[#F8FAFA]">
+                {overdueCount}
+              </span>
+              <span className="text-xs text-rose-500 font-semibold">fuera de plazo</span>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#EF4444]" />
+          </div>
+
+        </div>
+      ) : null}
+
+      <div className="space-y-3">
+        
+        {/* Header Title & Mode */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-poppins font-black tracking-tight text-[#464747] dark:text-[#F8FAFA]">
+              {pageTitle || "Tablero de Tareas"}
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              {dashboardMode === "userDaily" ? "Tus responsabilidades para el día de hoy" : "Organización y control de carga laboral"}
+            </p>
+          </div>
+          
+          {dashboardMode !== "userDaily" ? (
+            <ViewSelector value={view} onChange={setView} />
           ) : null}
         </div>
 
-        {dashboardMode !== "userDaily" ? (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <ViewSelector value={view} onChange={setView} />
-          </div>
-        ) : null}
-
-        <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40">
+        {/* Filters Card */}
+        <Card className="border-slate-200/60 dark:border-slate-800/60 bg-white dark:bg-[#1C1D1D] shadow-sm rounded-2xl">
           <CardContent className="p-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
               {!forceUserId ? (
-                <div className="space-y-2">
-                  <Label htmlFor="filter-user">Usuario</Label>
-                  <ShadcnSelect id="filter-user" value={filterUserId} onChange={(e) => setFilterUserId(e.target.value)}>
-                    <option value="all">Todos</option>
+                <div className="space-y-1.5">
+                  <Label htmlFor="filter-user" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Responsable</Label>
+                  <ShadcnSelect id="filter-user" value={filterUserId} onChange={(e) => setFilterUserId(e.target.value)} className="h-9.5">
+                    <option value="all">Todos los miembros</option>
                     {users.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.name}
@@ -320,39 +412,56 @@ export default function KanbanBoard({
                 </div>
               ) : null}
 
-              <div className="space-y-2">
-                <Label htmlFor="filter-status">Estado</Label>
-                <ShadcnSelect id="filter-status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)}>
-                  <option value="all">Todos</option>
+              <div className="space-y-1.5">
+                <Label htmlFor="filter-status" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Estado</Label>
+                <ShadcnSelect id="filter-status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} className="h-9.5">
+                  <option value="all">Todos los estados</option>
                   <option value="PENDING">Pendiente</option>
                   <option value="IN_PROGRESS">En progreso</option>
                   <option value="DONE">Completada</option>
                 </ShadcnSelect>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="filter-priority">Prioridad</Label>
-                <ShadcnSelect id="filter-priority" value={filterPriority} onChange={(e) => setFilterPriority(e.target.value as any)}>
-                  <option value="all">Todas</option>
+              <div className="space-y-1.5">
+                <Label htmlFor="filter-priority" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Prioridad</Label>
+                <ShadcnSelect id="filter-priority" value={filterPriority} onChange={(e) => setFilterPriority(e.target.value as any)} className="h-9.5">
+                  <option value="all">Todas las prioridades</option>
                   <option value="LOW">Baja</option>
                   <option value="MEDIUM">Media</option>
                   <option value="HIGH">Alta</option>
                 </ShadcnSelect>
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                <Button variant="outline" onClick={refresh} disabled={refreshing} className="w-full sm:flex-1">
-                  {refreshing ? "Refrescando…" : "Refrescar"}
+              {/* Actions row */}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Button 
+                  variant="outline" 
+                  onClick={refresh} 
+                  disabled={refreshing} 
+                  className="h-9.5 w-full border-slate-200 hover:bg-slate-50 text-slate-700 dark:border-slate-800 dark:hover:bg-slate-900 dark:text-slate-300 font-poppins font-normal text-xs flex items-center justify-center gap-1.5 rounded-xl"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                  <span>{refreshing ? "Refrescando" : "Refrescar"}</span>
                 </Button>
+                
                 {currentUser.role === "ADMIN" ? (
-                  <>
-                    <Button variant="outline" onClick={() => setCreateUserOpen(true)} className="w-full sm:flex-1">
-                      Nuevo usuario
-                    </Button>
-                    <Button variant="default" onClick={() => setCreateOpen(true)} className="w-full sm:flex-1">
-                      Nueva tarea
-                    </Button>
-                  </>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setCreateUserOpen(true)} 
+                    className="h-9.5 w-full border-[#016B6B]/20 text-[#016B6B] hover:bg-[#016B6B]/5 dark:border-[#3F9EA2]/20 dark:text-[#3F9EA2] dark:hover:bg-[#3F9EA2]/5 font-poppins font-normal text-xs flex items-center justify-center gap-1.5 rounded-xl"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    <span>Miembro</span>
+                  </Button>
+                ) : null}
+                {currentUser.role === "ADMIN" ? (
+                  <Button 
+                    onClick={() => setCreateOpen(true)} 
+                    className="h-9.5 w-full bg-[#016B6B] text-white hover:bg-[#3F9EA2] active:scale-[0.98] font-poppins font-semibold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-[#016B6B]/10 rounded-xl sm:col-span-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Nueva tarea</span>
+                  </Button>
                 ) : null}
               </div>
             </div>
@@ -379,6 +488,16 @@ export default function KanbanBoard({
         </Card>
       ) : null}
 
+      {!isInitialLoading && tasks.length === 0 && !emptyState ? (
+        <Card className="border-slate-200/60 bg-white dark:border-slate-800/60 dark:bg-[#1C1D1D]">
+          <CardContent className="flex min-h-[180px] items-center justify-center p-8 text-center">
+            <p className="font-poppins text-sm font-medium text-slate-500 dark:text-slate-400">
+              No hay tareas disponibles
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
        
 
       {view === "kanban" ? (
@@ -390,15 +509,25 @@ export default function KanbanBoard({
         >
           {visibleColumns.map((col) => {
             const colTasks = tasksByStatus(col.key)
+            const dotColor = 
+              col.key === "PENDING" ? "bg-[#3F9EA2]" :
+              col.key === "IN_PROGRESS" ? "bg-[#016B6B]" :
+              "bg-[#22C55E]"
+
             return (
-              <Card key={col.key} className="overflow-hidden snap-start shrink-0 w-[85vw] sm:w-[22rem] md:w-[22rem] md:snap-none">
-                <CardHeader className="border-b border-slate-200 dark:border-slate-800 p-3 sm:p-4">
+              <Card key={col.key} className="overflow-hidden snap-start shrink-0 w-[85vw] sm:w-[22rem] md:w-[22rem] md:snap-none rounded-2xl border border-slate-200/60 bg-white dark:border-slate-850 dark:bg-[#1C1D1D] shadow-sm">
+                <CardHeader className="border-b border-slate-100 dark:border-slate-800/60 p-3.5 sm:px-4 sm:py-3 bg-slate-50/30 dark:bg-[#121313]/10">
                   <div className="flex items-center justify-between gap-3">
-                    <CardTitle className="text-base">{col.title}</CardTitle>
-                    <Badge variant="secondary">{colTasks.length}</Badge>
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2.5 w-2.5 rounded-full ${dotColor}`} />
+                      <CardTitle className="text-sm font-poppins font-black text-slate-800 dark:text-slate-100 tracking-tight">{col.title}</CardTitle>
+                    </div>
+                    <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold border-0 px-2 py-0.5 text-[10px]">
+                      {colTasks.length}
+                    </Badge>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-4">
+                <CardContent className="space-y-3 sm:space-y-4 p-3.5 sm:p-4 bg-slate-50/10 dark:bg-transparent min-h-[400px]">
                   {isInitialLoading ? (
                     <>
                       <SkeletonTaskCard />
@@ -419,10 +548,10 @@ export default function KanbanBoard({
                         />
                       ))}
                       {tasksByStatus(col.key).length === 0 ? (
-                        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-100 p-8 text-center dark:border-slate-800/50">
-                          <p className="text-xs text-slate-500">Sin tareas en esta columna</p>
+                        <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200/60 p-8 text-center dark:border-slate-800/60 bg-white/40 dark:bg-slate-900/10 min-h-[160px]">
+                          <p className="text-xs text-slate-400 font-medium">Sin tareas en esta columna</p>
                           {tasks.length > 0 && filteredTasks.length === 0 && (
-                            <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-400">Hay tareas ocultas por los filtros actuales</p>
+                            <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Filtros activos ocultando tareas</p>
                           )}
                         </div>
                       ) : null}

@@ -11,8 +11,6 @@ const isoDate = z
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .refine(isValidIsoDate, "Fecha inválida")
 
-const tagsSchema = z.array(z.string().trim().min(1).max(24)).max(10)
-
 export const loginSchema = z.object({
   username: z.string().trim().min(1).max(64),
   password: z.string().min(1)
@@ -24,7 +22,7 @@ export const createTaskSchema = z.object({
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
   assignedUserIds: z.array(z.string().trim().min(1)),
   dueDate: isoDate.optional().nullable(),
-  tags: tagsSchema.optional()
+  tags: z.array(z.string().trim().min(1)).optional()
 })
 
 export const updateTaskSchema = z.object({
@@ -34,7 +32,7 @@ export const updateTaskSchema = z.object({
   status: z.enum(["PENDING", "IN_PROGRESS", "DONE"]).optional(),
   assignedUserIds: z.array(z.string().trim().min(1)).optional(),
   dueDate: isoDate.optional().nullable(),
-  tags: tagsSchema.optional()
+  tags: z.array(z.string().trim().min(1)).optional()
 })
 
 export const createCommentSchema = z.object({

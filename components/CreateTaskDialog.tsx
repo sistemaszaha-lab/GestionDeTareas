@@ -39,7 +39,6 @@ export default function CreateTaskDialog({
     assignedUserIds: string[]
     priority: TaskPriority
     dueDate: string | null
-    tags?: string[]
   }) => Promise<void>
 }) {
   const canAdmin = currentUser.role === "ADMIN"
@@ -55,7 +54,6 @@ export default function CreateTaskDialog({
   const [assignedUserIds, setAssignedUserIds] = useState<string[]>(defaultAssignedUserIds)
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM")
   const [dueDate, setDueDate] = useState("")
-  const [tags, setTags] = useState("")
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -65,17 +63,8 @@ export default function CreateTaskDialog({
     setAssignedUserIds(defaultAssignedUserIds)
     setPriority("MEDIUM")
     setDueDate("")
-    setTags("")
     setSaving(false)
   }, [open, defaultAssignedUserIds])
-
-  function parseTags(input: string) {
-    return input
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean)
-      .slice(0, 10)
-  }
 
   async function submit(e?: FormEvent) {
     e?.preventDefault()
@@ -89,7 +78,6 @@ export default function CreateTaskDialog({
         assignedUserIds: canAdmin ? assignedUserIds : [currentUser.id],
         priority,
         dueDate: dueDate ? dueDate : null,
-        tags: tags.trim() ? parseTags(tags) : []
       })
       onOpenChange(false)
     } finally {
@@ -144,17 +132,6 @@ export default function CreateTaskDialog({
                 </ShadcnSelect>
               </div>
             ) : null}
-
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="task-tags">Tags</Label>
-              <Input
-                id="task-tags"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="bug, urgente, cliente-x"
-              />
-              <div className="text-xs text-slate-600 dark:text-slate-400">Separadas por coma (opcional)</div>
-            </div>
 
             {canAdmin && users.length ? (
               <div className="space-y-2 sm:col-span-2">

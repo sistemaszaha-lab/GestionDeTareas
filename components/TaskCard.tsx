@@ -8,8 +8,16 @@ import { Card, CardContent } from "@/components/shadcn/ui/card"
 import { Badge } from "@/components/shadcn/ui/badge"
 import { Input } from "@/components/shadcn/ui/input"
 import { Label } from "@/components/shadcn/ui/label"
-import { Select as ShadcnSelect } from "@/components/shadcn/ui/select"
 import { cn } from "@/lib/ui"
+import { 
+  Calendar, 
+  Clock, 
+  MessageSquare, 
+  Paperclip, 
+  ChevronRight, 
+  Send, 
+  AlertCircle
+} from "lucide-react"
 
 type UserLite = { id: string; name: string; username: string; role: UserRole }
 
@@ -37,7 +45,7 @@ type CurrentUser = { id: string; role: "ADMIN" | "USER" }
 function formatDueDate(value: string | Date) {
   const d = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(d.getTime())) return null
-  return d.toLocaleDateString("es-MX")
+  return d.toLocaleDateString("es-MX", { day: '2-digit', month: 'short' })
 }
 
 export default function TaskCard({
@@ -46,7 +54,6 @@ export default function TaskCard({
   users,
   onOpen,
   onQuickStatusChange,
-  onQuickAssigneeChange,
   onAddComment
 }: {
   task: TaskWithRelations
@@ -58,7 +65,7 @@ export default function TaskCard({
   onAddComment?: (content: string) => Promise<void>
 }) {
   const [saving, setSaving] = useState(false)
-  const [commentsOpen, setCommentsOpen] = useState(task.comments.length > 0)
+  const [commentsOpen, setCommentsOpen] = useState(false)
   const [commentText, setCommentText] = useState("")
   const [commentSending, setCommentSending] = useState(false)
 
@@ -69,11 +76,6 @@ export default function TaskCard({
     [currentUser, task.assignedUsers]
   )
 
-  const canReassign = useMemo(
-    () => currentUser.role === "ADMIN" && Boolean(onQuickAssigneeChange) && Boolean(users?.length),
-    [currentUser.role, onQuickAssigneeChange, users?.length]
-  )
-
   const canComment = Boolean(onAddComment)
 
   const recentComments = useMemo(() => {
@@ -82,7 +84,7 @@ export default function TaskCard({
       const bt = new Date(b.createdAt).getTime()
       return bt - at
     })
-    return sorted.slice(0, 3)
+    return sorted.slice(0, 2)
   }, [task.comments])
 
   async function changeStatus(status: TaskStatus) {
@@ -90,18 +92,12 @@ export default function TaskCard({
     setSaving(true)
     try {
       await onQuickStatusChange(status)
-      toast.success("Estado actualizado")
+      toast.success("Estado de tarea actualizado")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo actualizar")
+      toast.error(err instanceof Error ? err.message : "Error")
     } finally {
       setSaving(false)
     }
-  }
-
-  async function changeAssignee(assignedUserIds: string[]) {
-    if (!onQuickAssigneeChange) return
-    // Note: onQuickAssigneeChange was single id, now it should be multiple. 
-    // But we'll remove quick reassign from card for simplicity and better UX.
   }
 
   async function submitComment() {
@@ -115,199 +111,246 @@ export default function TaskCard({
       setCommentsOpen(true)
       toast.success("Comentario agregado")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo comentar")
+      toast.error(err instanceof Error ? err.message : "Error")
     } finally {
       setCommentSending(false)
     }
   }
 
-  const statusBadgeVariant = task.status === "DONE" ? "success" : task.status === "IN_PROGRESS" ? "default" : "secondary"
-  const priorityBadgeVariant = task.priority === "HIGH" ? "danger" : task.priority === "LOW" ? "secondary" : "outline"
-
-  const statusLabel = task.status === "PENDING" ? "Pendiente" : task.status === "IN_PROGRESS" ? "En progreso" : "Hecha"
-  const priorityLabel = task.priority === "LOW" ? "Baja" : task.priority === "MEDIUM" ? "Media" : "Alta"
-
   const dueLabel = task.dueDate ? formatDueDate(task.dueDate) : null
   const dueTime = task.dueDate ? new Date(task.dueDate).getTime() : null
   const isOverdue = Boolean(dueTime && task.status !== "DONE" && dueTime < Date.now())
 
-  const priorityAccent =
-    !isOverdue && task.status !== "DONE" && task.priority === "HIGH"
-      ? "border-amber-300 dark:border-amber-500/40 bg-amber-50/30 dark:bg-amber-950/15"
-      : ""
+  // Priority Styles mapping
+  const priorityStyles = {
+    HIGH: "bg-rose-50 text-[#EF4444] border-rose-100 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/30",
+    MEDIUM: "bg-amber-50 text-[#F59E0B] border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30",
+    LOW: "bg-[#3F9EA2]/10 text-[#3F9EA2] border-[#3F9EA2]/20 dark:bg-[#3F9EA2]/5 dark:text-[#3F9EA2] dark:border-[#3F9EA2]/10"
+  }
+
+  const priorityLabel = {
+    HIGH: "Alta",
+    MEDIUM: "Media",
+    LOW: "Baja"
+  }[task.priority]
+
+  // Status Styles mapping
+  const statusStyles = {
+    PENDING: "bg-[#3F9EA2]/15 text-[#3F9EA2] dark:bg-[#3F9EA2]/10",
+    IN_PROGRESS: "bg-[#016B6B]/15 text-[#016B6B] dark:bg-[#3F9EA2]/10 dark:text-[#3F9EA2]",
+    DONE: "bg-[#22C55E]/15 text-[#22C55E] dark:bg-[#22C55E]/10"
+  }
+
+  const statusLabel = {
+    PENDING: "Pendiente",
+    IN_PROGRESS: "En progreso",
+    DONE: "Completada"
+  }[task.status]
 
   return (
     <Card
       className={cn(
-        "group shadow-none transition-[box-shadow,border-color,background-color] hover:shadow-sm",
-        "hover:border-slate-300 dark:hover:border-slate-700",
-        isOverdue ? "border-rose-300 dark:border-rose-500/40 bg-rose-50/40 dark:bg-rose-950/20" : "",
-        priorityAccent
+        "group border border-slate-200/60 bg-white dark:border-slate-850 dark:bg-[#1C1D1D] shadow-sm rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-md hover:border-slate-350 dark:hover:border-slate-700/80",
+        isOverdue ? "border-rose-250 dark:border-rose-950/50 bg-rose-50/10 dark:bg-rose-950/5" : ""
       )}
     >
-      <CardContent className="p-4">
-        <button className="w-full text-left" onClick={onOpen} type="button">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-slate-900 dark:text-slate-50 truncate">{task.title}</div>
-              {task.description ? (
-                <div className="mt-1 text-xs text-slate-600 dark:text-slate-400 line-clamp-2">{task.description}</div>
-              ) : null}
+      <CardContent className="p-4 space-y-4">
+        
+        {/* Title and Description */}
+        <button className="w-full text-left focus:outline-none" onClick={onOpen} type="button">
+          <div className="space-y-1.5">
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-sm font-poppins font-black text-slate-800 dark:text-slate-100 group-hover:text-[#016B6B] dark:group-hover:text-[#3F9EA2] transition-colors line-clamp-2">
+                {task.title}
+              </span>
+              <span className="shrink-0 flex gap-2 text-[10px] font-bold text-slate-400">
+                {task.attachments?.length ? (
+                  <span className="flex items-center gap-0.5" title={`${task.attachments.length} adjuntos`}>
+                    <Paperclip className="h-3 w-3" />
+                    {task.attachments.length}
+                  </span>
+                ) : null}
+                <span className="flex items-center gap-0.5" title={`${task.comments.length} comentarios`}>
+                  <MessageSquare className="h-3 w-3" />
+                  {task.comments.length}
+                </span>
+              </span>
             </div>
-            <div className="shrink-0 flex gap-2 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
-              {task.attachments?.length ? <span title={`${task.attachments.length} adjuntos`}>📎 {task.attachments.length}</span> : null}
-              <span title={`${task.comments.length} comentarios`}>💬 {task.comments.length}</span>
-            </div>
+
+            {task.description ? (
+              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                {task.description}
+              </p>
+            ) : null}
           </div>
 
-          <div className="mt-3 flex items-start justify-between gap-3">
-            <div className="flex flex-col gap-1 min-w-0">
+          {/* User avatars & Date */}
+          <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800/65">
+            
+            {/* Assignees initials list */}
+            <div className="flex items-center gap-1.5">
               <div className="flex -space-x-1.5 overflow-hidden">
                 {task.assignedUsers.map((u) => (
                   <div
                     key={u.id}
                     title={u.name}
-                    className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-slate-900 bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold uppercase"
+                    className="inline-flex h-6 w-6 rounded-full items-center justify-center bg-slate-200 text-slate-700 ring-2 ring-white dark:ring-[#1C1D1D] dark:bg-slate-800 dark:text-slate-300 text-[10px] font-bold uppercase"
                   >
                     {u.name.slice(0, 2)}
                   </div>
                 ))}
                 {task.assignedUsers.length === 0 && (
-                   <div className="h-6 w-6 rounded-full border border-dashed border-slate-300 dark:border-slate-700 bg-transparent flex items-center justify-center text-[8px] text-slate-400">
+                   <div className="h-6 w-6 rounded-full border border-dashed border-slate-300 dark:border-slate-700 bg-transparent flex items-center justify-center text-[9px] text-slate-400 font-semibold" title="Sin asignar">
                      ?
                    </div>
                 )}
               </div>
-              {dueLabel ? (
-                <div className={cn("text-[10px] truncate", isOverdue ? "text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-slate-400")}>
-                  {isOverdue ? "Vencida: " : "Vence: "}
-                  {dueLabel}
-                </div>
-              ) : (
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Sin vencimiento</div>
-              )}
+              
+              <div className="flex flex-col">
+                {dueLabel ? (
+                  <span className={cn(
+                    "text-[10px] font-semibold flex items-center gap-1",
+                    isOverdue ? "text-rose-600 dark:text-rose-400" : "text-slate-400"
+                  )}>
+                    {isOverdue ? <AlertCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                    <span>{dueLabel}</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-slate-400">Sin plazo</span>
+                )}
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Badge variant={priorityBadgeVariant as any}>{priorityLabel}</Badge>
-              <Badge variant={statusBadgeVariant as any}>{statusLabel}</Badge>
+            {/* Badges */}
+            <div className="flex items-center gap-1.5">
+              <Badge className={cn("text-[9px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider border-0 shadow-none", priorityStyles[task.priority])}>
+                {priorityLabel}
+              </Badge>
+              <Badge className={cn("text-[9px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider border-0 shadow-none", statusStyles[task.status])}>
+                {statusLabel}
+              </Badge>
             </div>
+
           </div>
         </button>
 
-        <div className="mt-4 space-y-4">
-          <div>
-            <div className="text-xs font-medium text-slate-700 dark:text-slate-200">Estado</div>
-            <div className="mt-2 flex flex-wrap rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40 p-1 gap-1">
-              {statusOrder.map((s) => {
-                const active = s === task.status
-                const label = s === "PENDING" ? "Pendiente" : s === "IN_PROGRESS" ? "En progreso" : "Hecha"
-                return (
+        {/* Dynamic segmented controllers */}
+        <div className="space-y-3 pt-1 border-t border-slate-100 dark:border-slate-800/65">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cambiar Estado</span>
+            <button
+              type="button"
+              className="text-[10px] font-semibold text-[#016B6B] dark:text-[#3F9EA2] hover:underline"
+              onClick={() => setCommentsOpen(!commentsOpen)}
+            >
+              {commentsOpen ? "Ocultar Comentarios" : `Comentarios (${task.comments.length})`}
+            </button>
+          </div>
+
+          <div className="flex rounded-lg border border-slate-200/60 dark:border-slate-800/80 bg-slate-50/50 dark:bg-[#121313]/30 p-0.5 gap-0.5">
+            {statusOrder.map((s) => {
+              const active = s === task.status
+              const label = s === "PENDING" ? "Pendiente" : s === "IN_PROGRESS" ? "Progreso" : "Hecha"
+              
+              // Colored backgrounds for active buttons
+              const activeBg = 
+                s === "PENDING" ? "bg-[#3F9EA2] text-white hover:bg-[#3F9EA2]/90" : 
+                s === "IN_PROGRESS" ? "bg-[#016B6B] text-white hover:bg-[#016B6B]/90" : 
+                "bg-[#22C55E] text-white hover:bg-[#22C55E]/90"
+
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => changeStatus(s)}
+                  disabled={!canMove || saving}
+                  className={cn(
+                    "flex-1 text-center py-1 text-[10px] font-bold rounded-md transition-all duration-200",
+                    active 
+                      ? `${activeBg} shadow-sm` 
+                      : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200/40 dark:hover:bg-slate-850/40"
+                  )}
+                  title={canMove ? `Mover a ${label}` : "No autorizado"}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Quick Comments input popup inside Card */}
+          {commentsOpen && (
+            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800/50">
+              
+              {/* Quick comments feed */}
+              <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                {task.comments.length === 0 ? (
+                  <div className="text-[10px] text-slate-400 text-center py-2">Sin comentarios aún.</div>
+                ) : (
+                  recentComments.map((c) => (
+                    <div
+                      key={c.id}
+                      className="rounded-lg bg-slate-50 dark:bg-slate-900/40 p-2 text-xs border border-slate-100 dark:border-slate-800/40"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-[#464747] dark:text-slate-300 text-[10px]">{c.user.name}</span>
+                        <span className="text-[9px] text-slate-400">
+                          {new Date(c.createdAt).toLocaleDateString("es-MX")}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
+                        {c.content}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Add comment input */}
+              {canComment && (
+                <div className="flex gap-1.5 items-center">
+                  <Input
+                    className="h-8 text-xs rounded-lg min-w-0 flex-1 px-2.5 py-1"
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        void submitComment()
+                      }
+                    }}
+                    placeholder="Escribe un comentario..."
+                    disabled={commentSending}
+                  />
                   <Button
-                    key={s}
+                    variant="outline"
                     type="button"
                     size="sm"
-                    variant={active ? "default" : "ghost"}
-                    onClick={() => changeStatus(s)}
-                    disabled={!canMove || saving}
-                    aria-pressed={active}
-                    className={[
-                      "h-9 rounded-full px-3 text-xs font-semibold md:h-7 md:text-[11px]",
-                      active ? "" : "text-slate-700 dark:text-slate-200"
-                    ].join(" ")}
-                    title={canMove ? `Cambiar a ${label}` : "No puedes cambiar el estado"}
+                    className="h-8 w-8 px-0 shrink-0 rounded-lg hover:border-[#016B6B]/40 hover:text-[#016B6B]"
+                    onClick={submitComment}
+                    disabled={!commentText.trim() || commentSending}
                   >
-                    {label}
+                    <Send className="h-3.5 w-3.5" />
                   </Button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Removido el select de reasignación rápida para favorecer MultiSelect en el modal */}
-
-          {canComment ? (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-medium text-slate-700 dark:text-slate-200">Comentarios</div>
-                <button
-                  type="button"
-                  className="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-50 underline underline-offset-4"
-                  onClick={() => setCommentsOpen((v) => !v)}
-                >
-                  {commentsOpen ? "Ocultar" : "Ver"}
-                </button>
-              </div>
-
-              <Label htmlFor={`comment-${task.id}`} className="sr-only">
-                Nuevo comentario
-              </Label>
-              <div className="flex gap-2 items-end">
-                <Input
-                  id={`comment-${task.id}`}
-                  className="min-w-0 flex-1"
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      void submitComment()
-                    }
-                  }}
-                  placeholder="Escribe un comentario…"
-                  disabled={commentSending}
-                />
-                <Button
-                  variant="outline"
-                  type="button"
-                  className="h-11 shrink-0"
-                  onClick={submitComment}
-                  disabled={!commentText.trim() || commentSending}
-                >
-                  {commentSending ? "Enviando…" : "Enviar"}
-                </Button>
-              </div>
-
-              {commentsOpen ? (
-                <div className="space-y-2">
-                  {task.comments.length === 0 ? (
-                    <div className="text-xs text-slate-500 dark:text-slate-400">Aún no hay comentarios.</div>
-                  ) : (
-                    recentComments.map((c) => (
-                      <div
-                        key={c.id}
-                        className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40 px-3 py-2"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="text-xs font-semibold truncate text-slate-900 dark:text-slate-50">{c.user.name}</div>
-                          <div className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                            {new Date(c.createdAt).toLocaleString()}
-                          </div>
-                        </div>
-                        <div className="mt-1 text-sm text-slate-800 dark:text-slate-50 whitespace-pre-wrap">{c.content}</div>
-                      </div>
-                    ))
-                  )}
-
-                  {task.comments.length > recentComments.length ? (
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Mostrando los últimos {recentComments.length}.
-                    </div>
-                  ) : null}
                 </div>
-              ) : null}
+              )}
+
             </div>
-          ) : null}
+          )}
 
-          {!canMove && !canReassign && !canComment ? (
-            <div className="text-[11px] text-slate-500 dark:text-slate-400">Solo el asignado o admin puede mover.</div>
-          ) : null}
-
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={onOpen} size="sm">
-              Ver
+          {/* Action Row */}
+          <div className="flex justify-end pt-1">
+            <Button 
+              variant="ghost" 
+              onClick={onOpen} 
+              size="sm"
+              className="h-7 text-xs font-semibold text-slate-500 hover:text-[#016B6B] dark:hover:text-[#3F9EA2] flex items-center gap-1 group/btn"
+            >
+              <span>Detalles</span>
+              <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover/btn:translate-x-0.5" />
             </Button>
           </div>
+
         </div>
       </CardContent>
     </Card>

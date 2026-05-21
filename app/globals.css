@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;900&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,8 +9,42 @@ body {
   width: 100%;
   min-height: 100%;
   overflow-y: auto;
+  scroll-behavior: smooth;
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 overflow-x-hidden;
+  @apply bg-[#F8FAFA] text-[#464747] dark:bg-[#121313] dark:text-[#F8FAFA] overflow-x-hidden font-poppins transition-colors duration-200 antialiased;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3F9EA2;
+}
+
+/* Smooth Focus States */
+input, select, textarea {
+  @apply transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#016B6B]/20 focus:border-[#016B6B] dark:focus:ring-[#3F9EA2]/20 dark:focus:border-[#3F9EA2];
+}
+
+/* Custom styles for tables, inputs, badges and cards */
+.custom-card {
+  @apply rounded-2xl border border-slate-200/60 dark:border-slate-800/60 bg-white dark:bg-[#1C1D1D] shadow-soft transition-all duration-300;
 }
