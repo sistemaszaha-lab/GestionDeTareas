@@ -268,7 +268,7 @@ export default function KanbanBoard({
   }
 
   async function addAttachment(taskId: string, formData: FormData) {
-    const data = await fetchJsonOrThrow<{ attachment?: any }>(
+    const data = await fetchJsonOrThrow<{ attachment?: any; attachments?: any[] }>(
       `/api/tasks/${taskId}/attachments`,
       {
         method: "POST",
@@ -276,8 +276,13 @@ export default function KanbanBoard({
       },
       { defaultError: "No se pudo adjuntar", logTag: "POST /api/tasks/:id/attachments" }
     )
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, attachments: [...(t.attachments || []), data.attachment] } : t)))
-    setActiveTask((prev) => (prev?.id === taskId ? { ...prev, attachments: [...(prev.attachments || []), data.attachment] } : prev))
+    const attachments = Array.isArray(data.attachments)
+      ? data.attachments
+      : data.attachment
+        ? [...(tasks.find((t) => t.id === taskId)?.attachments || []), data.attachment]
+        : []
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, attachments } : t)))
+    setActiveTask((prev) => (prev?.id === taskId ? { ...prev, attachments } : prev))
   }
 
   async function deleteAttachment(taskId: string, attachmentId: string) {

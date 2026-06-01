@@ -129,13 +129,17 @@ export default function TaskModal(props: {
   const [deleting, setDeleting] = useState(false)
 
   const [uploadMode, setUploadMode] = useState<"file" | "link" | null>(null)
-  const [fileToUpload, setFileToUpload] = useState<File | null>(null)
+  const [filesToUpload, setFilesToUpload] = useState<File[]>([])
   const [linkUrl, setLinkUrl] = useState("")
   const [linkName, setLinkName] = useState("")
   const [attaching, setAttaching] = useState(false)
 
   useEffect(() => {
     if (!open) return
+    setUploadMode(null)
+    setFilesToUpload([])
+    setLinkUrl("")
+    setLinkName("")
     if (mode === "create") {
       setTitle("")
       setDescription("")
@@ -219,20 +223,22 @@ export default function TaskModal(props: {
 
   async function addAttachment() {
     if (!task || !props.onAddAttachment) return
-    if (uploadMode === "file" && !fileToUpload) return
+    if (uploadMode === "file" && filesToUpload.length === 0) return
     if (uploadMode === "link" && (!linkUrl || !linkName)) return
 
     setAttaching(true)
     try {
       const formData = new FormData()
-      if (uploadMode === "file" && fileToUpload) {
-        formData.append("file", fileToUpload)
+      if (uploadMode === "file" && filesToUpload.length > 0) {
+        for (const file of filesToUpload) {
+          formData.append("files", file)
+        }
       } else {
         formData.append("url", linkUrl)
         formData.append("name", linkName)
       }
       await props.onAddAttachment(task.id, formData)
-      setFileToUpload(null)
+      setFilesToUpload([])
       setLinkUrl("")
       setLinkName("")
       setUploadMode(null)
@@ -533,11 +539,11 @@ export default function TaskModal(props: {
 
               {uploadMode === "file" ? (
                 <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800/80 p-3.5 space-y-3 bg-slate-50/50 dark:bg-slate-900/10">
-                  <Label className="text-xs font-medium text-slate-500">Seleccionar archivo (Máx 5MB)</Label>
-                  <Input type="file" onChange={(e) => setFileToUpload(e.target.files?.[0] ?? null)} className="h-9.5 text-xs" />
+                  <Label className="text-xs font-medium text-slate-500">Seleccionar uno o varios archivos (Máx 5MB c/u)</Label>
+                  <Input type="file" multiple onChange={(e) => setFilesToUpload(Array.from(e.target.files ?? []))} className="h-9.5 text-xs" />
                   <div className="flex gap-2 justify-end">
-                    <Button variant="outline" size="sm" onClick={() => { setUploadMode(null); setFileToUpload(null) }} className="h-8 rounded-lg text-xs font-semibold">Cancelar</Button>
-                    <Button size="sm" onClick={addAttachment} disabled={!fileToUpload || attaching} className="h-8 rounded-lg bg-[#016B6B] hover:bg-[#3F9EA2] text-white text-xs font-semibold px-4">
+                    <Button variant="outline" size="sm" onClick={() => { setUploadMode(null); setFilesToUpload([]) }} className="h-8 rounded-lg text-xs font-semibold">Cancelar</Button>
+                    <Button size="sm" onClick={addAttachment} disabled={filesToUpload.length === 0 || attaching} className="h-8 rounded-lg bg-[#016B6B] hover:bg-[#3F9EA2] text-white text-xs font-semibold px-4">
                       {attaching ? "Subiendo..." : "Subir"}
                     </Button>
                   </div>

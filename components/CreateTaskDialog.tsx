@@ -39,6 +39,7 @@ export default function CreateTaskDialog({
     assignedUserIds: string[]
     priority: TaskPriority
     dueDate: string | null
+    tags?: string[]
   }) => Promise<void>
 }) {
   const canAdmin = currentUser.role === "ADMIN"
@@ -54,6 +55,7 @@ export default function CreateTaskDialog({
   const [assignedUserIds, setAssignedUserIds] = useState<string[]>(defaultAssignedUserIds)
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM")
   const [dueDate, setDueDate] = useState("")
+  const [tags, setTags] = useState("")
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -63,8 +65,16 @@ export default function CreateTaskDialog({
     setAssignedUserIds(defaultAssignedUserIds)
     setPriority("MEDIUM")
     setDueDate("")
+    setTags("")
     setSaving(false)
   }, [open, defaultAssignedUserIds])
+
+  function parseTags(input: string) {
+    return input
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+  }
 
   async function submit(e?: FormEvent) {
     e?.preventDefault()
@@ -78,6 +88,7 @@ export default function CreateTaskDialog({
         assignedUserIds: canAdmin ? assignedUserIds : [currentUser.id],
         priority,
         dueDate: dueDate ? dueDate : null,
+        tags: tags.trim() ? parseTags(tags) : []
       })
       onOpenChange(false)
     } finally {
@@ -112,6 +123,16 @@ export default function CreateTaskDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Agrega contexto, criterios de aceptación, links…"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="task-tags">Tags</Label>
+            <Input
+              id="task-tags"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="bug, urgente, cliente-x"
             />
           </div>
 
