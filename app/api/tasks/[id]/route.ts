@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma"
 import { jsonError, jsonException, jsonOk } from "@/lib/http"
 import { requireSession } from "@/lib/server-auth"
 import { isAdmin, taskByIdWhere } from "@/lib/task-permissions"
+import { softDeleteSingleTask } from "@/lib/task-trash"
 import { updateTaskSchema } from "@/lib/validators"
 import type { NextRequest } from "next/server"
 
@@ -80,10 +81,9 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
   try {
     const user = await requireSession(req)
     if (!user) return jsonError("Unauthorized", 401)
-    if (user.role !== "ADMIN") return jsonError("Forbidden", 403)
 
     const { id } = await Promise.resolve(ctx.params)
-    await prisma.task.delete({ where: { id } }).catch(() => null)
+    await softDeleteSingleTask({ user, taskId: id })
     return jsonOk({ ok: true })
   } catch (err) {
     return jsonException(err, { route: "DELETE /api/tasks/:id" })

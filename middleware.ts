@@ -8,7 +8,8 @@ const PUBLIC_EXTRA_PATHS = ["/complete-profile"]
 const PUBLIC_API_PREFIXES = [
   "/api/auth",
   "/api/debug",
-  "/api/tasks/reminders"
+  "/api/tasks/reminders",
+  "/api/cron"
 ]
 
 export async function middleware(req: NextRequest) {

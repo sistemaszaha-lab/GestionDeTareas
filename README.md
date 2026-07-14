@@ -43,6 +43,12 @@ SEED_ADMIN_USERNAME="admin"
 SEED_ADMIN_PASSWORD="Admin12345!"
 ```
 
+Cron de papelera:
+
+```bash
+CRON_SECRET="cambia-esto-por-un-secreto-distinto"
+```
+
 ## Instalación y ejecución
 
 ```bash
@@ -61,3 +67,11 @@ Abre `http://localhost:3000`.
 - Roles:
   - `ADMIN`: crear/editar/eliminar tareas, reasignar.
   - `USER`: ver tareas, mover estado si está asignado, comentar.
+
+## Papelera y limpieza automática
+
+- La papelera vive en `/dashboard/papelera`.
+- Las tareas eliminadas lógicamente conservan estado, asignados, comentarios, etiquetas y adjuntos.
+- La limpieza automática se expone en `POST /api/cron/purge-trash`.
+- Protege esa ruta con `Authorization: Bearer <CRON_SECRET>`.
+- En Railway puedes crear un cron diario que haga `POST` a `https://TU-DOMINIO/api/cron/purge-trash` con ese encabezado.

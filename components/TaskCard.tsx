@@ -19,6 +19,10 @@ import {
   AlertCircle
 } from "lucide-react"
 
+function getCurrentTimestamp() {
+  return new Date().getTime()
+}
+
 type UserLite = { id: string; name: string; username: string; role: UserRole }
 
 type CommentWithUser = {
@@ -54,7 +58,10 @@ export default function TaskCard({
   users,
   onOpen,
   onQuickStatusChange,
-  onAddComment
+  onAddComment,
+  selectionMode = false,
+  selected = false,
+  onSelectionChange
 }: {
   task: TaskWithRelations
   currentUser: CurrentUser
@@ -63,6 +70,9 @@ export default function TaskCard({
   onQuickStatusChange: (status: TaskStatus) => Promise<void> | void
   onQuickAssigneeChange?: (assignedToId: string) => Promise<void>
   onAddComment?: (content: string) => Promise<void>
+  selectionMode?: boolean
+  selected?: boolean
+  onSelectionChange?: (next: boolean) => void
 }) {
   const [saving, setSaving] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
@@ -119,7 +129,7 @@ export default function TaskCard({
 
   const dueLabel = task.dueDate ? formatDueDate(task.dueDate) : null
   const dueTime = task.dueDate ? new Date(task.dueDate).getTime() : null
-  const isOverdue = Boolean(dueTime && task.status !== "DONE" && dueTime < Date.now())
+  const isOverdue = Boolean(dueTime && task.status !== "DONE" && dueTime < getCurrentTimestamp())
 
   // Priority Styles mapping
   const priorityStyles = {
@@ -151,13 +161,24 @@ export default function TaskCard({
     <Card
       className={cn(
         "group border border-slate-200/60 bg-white dark:border-slate-850 dark:bg-[#1C1D1D] shadow-sm rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-md hover:border-slate-350 dark:hover:border-slate-700/80",
-        isOverdue ? "border-rose-250 dark:border-rose-950/50 bg-rose-50/10 dark:bg-rose-950/5" : ""
+        isOverdue ? "border-rose-250 dark:border-rose-950/50 bg-rose-50/10 dark:bg-rose-950/5" : "",
+        selected ? "ring-2 ring-[#016B6B] dark:ring-[#3F9EA2]" : ""
       )}
     >
       <CardContent className="p-4 space-y-4">
-        
-        {/* Title and Description */}
-        <button className="w-full text-left focus:outline-none" onClick={onOpen} type="button">
+        <div className="flex items-start gap-2">
+          {selectionMode ? (
+            <input
+              aria-label={`Seleccionar tarea ${task.title}`}
+              type="checkbox"
+              checked={selected}
+              onChange={(e) => onSelectionChange?.(e.target.checked)}
+              className="mt-1 h-4.5 w-4.5 rounded border-slate-300 text-[#016B6B] focus:ring-[#016B6B] accent-[#016B6B]"
+            />
+          ) : null}
+
+          {/* Title and Description */}
+          <button className="w-full text-left focus:outline-none" onClick={selectionMode ? undefined : onOpen} type="button" disabled={selectionMode}>
           <div className="space-y-1.5">
             <div className="flex items-start justify-between gap-3">
               <span className="text-sm font-poppins font-black text-slate-800 dark:text-slate-100 group-hover:text-[#016B6B] dark:group-hover:text-[#3F9EA2] transition-colors line-clamp-2">
@@ -233,6 +254,7 @@ export default function TaskCard({
 
           </div>
         </button>
+        </div>
 
         {/* Dynamic segmented controllers */}
         <div className="space-y-3 pt-1 border-t border-slate-100 dark:border-slate-800/65">
@@ -241,6 +263,7 @@ export default function TaskCard({
             <button
               type="button"
               className="text-[10px] font-semibold text-[#016B6B] dark:text-[#3F9EA2] hover:underline"
+              disabled={selectionMode}
               onClick={() => setCommentsOpen(!commentsOpen)}
             >
               {commentsOpen ? "Ocultar Comentarios" : `Comentarios (${task.comments.length})`}
@@ -259,14 +282,14 @@ export default function TaskCard({
                 "bg-[#22C55E] text-white hover:bg-[#22C55E]/90"
 
               return (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => changeStatus(s)}
-                  disabled={!canMove || saving}
-                  className={cn(
-                    "flex-1 text-center py-1 text-[10px] font-bold rounded-md transition-all duration-200",
-                    active 
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => changeStatus(s)}
+                    disabled={!canMove || saving || selectionMode}
+                    className={cn(
+                      "flex-1 text-center py-1 text-[10px] font-bold rounded-md transition-all duration-200",
+                      active 
                       ? `${activeBg} shadow-sm` 
                       : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200/40 dark:hover:bg-slate-850/40"
                   )}
@@ -279,7 +302,7 @@ export default function TaskCard({
           </div>
 
           {/* Quick Comments input popup inside Card */}
-          {commentsOpen && (
+          {commentsOpen && !selectionMode && (
             <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800/50">
               
               {/* Quick comments feed */}
@@ -339,13 +362,14 @@ export default function TaskCard({
           )}
 
           {/* Action Row */}
-          <div className="flex justify-end pt-1">
-            <Button 
-              variant="ghost" 
-              onClick={onOpen} 
-              size="sm"
-              className="h-7 text-xs font-semibold text-slate-500 hover:text-[#016B6B] dark:hover:text-[#3F9EA2] flex items-center gap-1 group/btn"
-            >
+            <div className="flex justify-end pt-1">
+              <Button 
+                variant="ghost" 
+                onClick={selectionMode ? undefined : onOpen} 
+                size="sm"
+                disabled={selectionMode}
+                className="h-7 text-xs font-semibold text-slate-500 hover:text-[#016B6B] dark:hover:text-[#3F9EA2] flex items-center gap-1 group/btn"
+              >
               <span>Detalles</span>
               <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover/btn:translate-x-0.5" />
             </Button>

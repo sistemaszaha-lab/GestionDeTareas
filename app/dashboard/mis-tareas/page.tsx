@@ -12,7 +12,7 @@ export default async function MisTareasPage() {
   })
 
   const tasks = await prisma.task.findMany({
-    where: { assignedUsers: { some: { id: user.id } } },
+    where: { deletedAt: null, assignedUsers: { some: { id: user.id } } },
     include: {
       assignedUsers: { select: { id: true, name: true, username: true, role: true } },
       comments: {

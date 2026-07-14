@@ -6,6 +6,9 @@ function isValidIsoDate(input: string) {
   return d.toISOString().slice(0, 10) === input
 }
 
+export const taskStatusValues = ["PENDING", "IN_PROGRESS", "DONE"] as const
+export const taskPriorityValues = ["LOW", "MEDIUM", "HIGH"] as const
+
 const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -19,7 +22,7 @@ export const loginSchema = z.object({
 export const createTaskSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().max(5000).optional().nullable(),
-  priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
+  priority: z.enum(taskPriorityValues).optional(),
   assignedUserIds: z.array(z.string().trim().min(1)),
   dueDate: isoDate.optional().nullable(),
   tags: z.array(z.string().trim().min(1)).optional()
@@ -28,11 +31,29 @@ export const createTaskSchema = z.object({
 export const updateTaskSchema = z.object({
   title: z.string().trim().min(1).max(200).optional(),
   description: z.string().trim().max(5000).optional().nullable(),
-  priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
-  status: z.enum(["PENDING", "IN_PROGRESS", "DONE"]).optional(),
+  priority: z.enum(taskPriorityValues).optional(),
+  status: z.enum(taskStatusValues).optional(),
   assignedUserIds: z.array(z.string().trim().min(1)).optional(),
   dueDate: isoDate.optional().nullable(),
   tags: z.array(z.string().trim().min(1)).optional()
+})
+
+export const taskTrashBulkSchema = z.object({
+  taskIds: z.array(z.string().trim().min(1)).min(1),
+  columnId: z.enum(taskStatusValues)
+})
+
+export const taskRestoreBulkSchema = z.object({
+  taskIds: z.array(z.string().trim().min(1)).min(1)
+})
+
+export const taskRestoreSingleSchema = z.object({
+  taskId: z.string().trim().min(1),
+  columnId: z.enum(taskStatusValues).optional()
+})
+
+export const taskPermanentDeleteSchema = z.object({
+  taskIds: z.array(z.string().trim().min(1)).min(1)
 })
 
 export const createCommentSchema = z.object({

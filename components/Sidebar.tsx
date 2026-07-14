@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import type { SessionUser } from "@/lib/session"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -7,25 +8,46 @@ import { LayoutDashboard,
  CheckSquare,
  Calendar,
  BarChart2,
- Users
+ Users,
+ Trash2
 } from "lucide-react"
 import { cn } from "@/lib/ui"
 import { Badge } from "@/components/shadcn/ui/badge"
 
-const menuItems = [
-  { label:"Dashboard", href:"/dashboard", icon:LayoutDashboard, exact: true },
-  { label: "Mis tareas", href: "/dashboard/mis-tareas", icon: CheckSquare, exact: false },
-  { label: "Calendario", href: "/dashboard/calendario", icon: Calendar, exact: false },
-  { label: "Reportes", href: "/dashboard/reportes", icon: BarChart2, exact: false },
-  { label: "Usuarios", href: "/dashboard/usuarios", icon: Users, exact: false }
-] as const
+type NavigationRole = SessionUser["role"]
 
-export function SidebarContent({ user, onNavigate }: { user: SessionUser; onNavigate?: () => void }) {
+const navigationItems: ReadonlyArray<{
+  label: string
+  href: string
+  icon: typeof LayoutDashboard
+  exact: boolean
+  roles: readonly NavigationRole[]
+}> = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, exact: true, roles: ["ADMIN", "USER"] },
+  { label: "Mis tareas", href: "/dashboard/mis-tareas", icon: CheckSquare, exact: false, roles: ["ADMIN", "USER"] },
+  { label: "Calendario", href: "/dashboard/calendario", icon: Calendar, exact: false, roles: ["ADMIN", "USER"] },
+  { label: "Reportes", href: "/dashboard/reportes", icon: BarChart2, exact: false, roles: ["ADMIN", "USER"] },
+  { label: "Usuarios", href: "/dashboard/usuarios", icon: Users, exact: false, roles: ["ADMIN"] }
+]
+
+export function SidebarContent({
+  user,
+  onNavigate,
+  onOpenTrash
+}: {
+  user: SessionUser
+  onNavigate?: () => void
+  onOpenTrash?: () => void
+}) {
   const pathname = usePathname()
 
   const isLinkActive = (href: string, exact?: boolean) => (exact ? pathname === href : pathname.startsWith(href))
+  const isTrashActive = pathname === "/dashboard/papelera"
 
-  const visibleItems = user.role === "ADMIN" ? menuItems : menuItems.filter((item) => item.label !== "Usuarios")
+  const visibleItems = useMemo(
+    () => navigationItems.filter((item) => item.roles.includes(user.role)),
+    [user.role]
+  )
 
   return (
     <div className="flex h-full flex-col justify-between">
@@ -76,6 +98,25 @@ export function SidebarContent({ user, onNavigate }: { user: SessionUser; onNavi
       </div>
 
       <div className="mt-auto px-1 pt-4">
+        <button
+          type="button"
+          onClick={onOpenTrash}
+          className={cn(
+            "mb-3 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 group",
+            isTrashActive
+              ? "bg-rose-50 text-rose-600 shadow-sm dark:bg-rose-950/20 dark:text-rose-300"
+              : "text-[#464747]/80 hover:bg-rose-50 hover:text-rose-600 dark:text-[#F8FAFA]/80 dark:hover:bg-rose-950/20 dark:hover:text-rose-300"
+          )}
+        >
+          <Trash2
+            className={cn(
+              "h-4.5 w-4.5 transition-transform duration-200 group-hover:scale-110",
+              isTrashActive ? "text-rose-600 dark:text-rose-300" : "text-[#464747]/60 dark:text-[#F8FAFA]/50 group-hover:text-rose-600 dark:group-hover:text-rose-300"
+            )}
+          />
+          <span className="font-poppins font-normal">Papelera</span>
+        </button>
+
         <div className="rounded-xl border border-slate-200/50 bg-slate-100/50 p-3.5 dark:border-slate-800/40 dark:bg-slate-900/40">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#3F9EA2] text-xs font-bold uppercase text-white ring-2 ring-white dark:ring-slate-950">

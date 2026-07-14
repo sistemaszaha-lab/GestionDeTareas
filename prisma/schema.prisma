@@ -23,6 +23,7 @@ model User {
   accounts      Account[]
   comments      Comment[]
   sessions      Session[]
+  tasksDeleted  Task[]    @relation("TaskDeletedBy")
   tasksAssigned Task[]    @relation("TaskAssignedUsers")
 }
 
@@ -74,12 +75,17 @@ model Task {
   tags          String[]     @default([])
   attachments   Json?        @default("[]")
   reminderSent  Boolean      @default(false)
+  deletedAt     DateTime?
+  deletedById   String?
   comments      Comment[]
+  deletedBy     User?        @relation("TaskDeletedBy", fields: [deletedById], references: [id])
   assignedUsers User[]       @relation("TaskAssignedUsers")
 
   @@index([status])
   @@index([priority])
   @@index([dueDate])
+  @@index([deletedAt])
+  @@index([deletedById])
 }
 
 model Comment {

@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 import { signOut } from "next-auth/react"
-import { useTheme } from "next-themes"
+import { useTheme } from "@/components/ThemeProvider"
 import type { SessionUser } from "@/lib/session"
 import { fetchJsonOrThrow } from "@/lib/fetch-json"
 import { Button } from "@/components/shadcn/ui/button"
@@ -14,12 +14,9 @@ import { Search, Bell, Sun, Moon, LogOut, Menu } from "lucide-react"
 export default function Topbar({ user, onOpenMenu }: { user: SessionUser; onOpenMenu?: () => void }) {
   const router = useRouter()
   const { resolvedTheme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const notificationRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => setMounted(true), [])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -105,18 +102,14 @@ export default function Topbar({ user, onOpenMenu }: { user: SessionUser; onOpen
               ) : null}
             </div>
 
-            {mounted ? (
-              <Button
-                variant="ghost"
-                className="h-10 w-10 px-0 text-slate-600 hover:bg-[#016B6B]/5 dark:text-slate-300"
-                onClick={() => setTheme(isDark ? "light" : "dark")}
-                aria-label={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-              >
-                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </Button>
-            ) : (
-              <div className="h-10 w-10" />
-            )}
+            <Button
+              variant="ghost"
+              className="h-10 w-10 px-0 text-slate-600 hover:bg-[#016B6B]/5 dark:text-slate-300"
+              onClick={() => setTheme(isDark ? "light" : "dark")}
+              aria-label={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            >
+              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
 
             <div className="h-5 w-px bg-slate-200 dark:bg-slate-800" />
 

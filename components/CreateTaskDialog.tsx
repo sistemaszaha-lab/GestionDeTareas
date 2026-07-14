@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, type FormEvent } from "react"
+import { useMemo, useState, type FormEvent } from "react"
 import type { TaskPriority, UserRole } from "@prisma/client"
 import {
   Dialog,
@@ -50,24 +50,25 @@ export default function CreateTaskDialog({
     return current ? [current] : []
   }, [currentUser.id, users])
 
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [assignedUserIds, setAssignedUserIds] = useState<string[]>(defaultAssignedUserIds)
-  const [priority, setPriority] = useState<TaskPriority>("MEDIUM")
-  const [dueDate, setDueDate] = useState("")
-  const [tags, setTags] = useState("")
-  const [saving, setSaving] = useState(false)
+  function createInitialState() {
+    return {
+      title: "",
+      description: "",
+      assignedUserIds: defaultAssignedUserIds,
+      priority: "MEDIUM" as TaskPriority,
+      dueDate: "",
+      tags: "",
+      saving: false
+    }
+  }
 
-  useEffect(() => {
-    if (!open) return
-    setTitle("")
-    setDescription("")
-    setAssignedUserIds(defaultAssignedUserIds)
-    setPriority("MEDIUM")
-    setDueDate("")
-    setTags("")
-    setSaving(false)
-  }, [open, defaultAssignedUserIds])
+  const [title, setTitle] = useState(() => createInitialState().title)
+  const [description, setDescription] = useState(() => createInitialState().description)
+  const [assignedUserIds, setAssignedUserIds] = useState<string[]>(() => createInitialState().assignedUserIds)
+  const [priority, setPriority] = useState<TaskPriority>(() => createInitialState().priority)
+  const [dueDate, setDueDate] = useState(() => createInitialState().dueDate)
+  const [tags, setTags] = useState(() => createInitialState().tags)
+  const [saving, setSaving] = useState(() => createInitialState().saving)
 
   function parseTags(input: string) {
     return input

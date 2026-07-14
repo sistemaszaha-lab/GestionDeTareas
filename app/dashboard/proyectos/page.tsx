@@ -26,10 +26,10 @@ export default async function ProyectosPage() {
   const completed = projTasks.filter((t) => t.status === "DONE").length
   const pending = total - completed
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0
-  const now = Date.now()
+  const now = new Date()
   const overdue = projTasks.filter((t) => {
     if (t.status === "DONE" || !t.dueDate) return false
-    return new Date(t.dueDate).getTime() < now
+    return new Date(t.dueDate) < now
   }).length
 
   const projects = [

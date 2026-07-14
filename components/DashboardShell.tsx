@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import type { SessionUser } from "@/lib/session"
 import { SidebarContent } from "@/components/Sidebar"
 import Topbar from "@/components/Topbar"
+import TrashPanel from "@/components/TrashPanel"
 import { Button } from "@/components/shadcn/ui/button"
 
 function CloseIcon(props: SVGProps<SVGSVGElement>) {
@@ -18,6 +19,7 @@ function CloseIcon(props: SVGProps<SVGSVGElement>) {
 
 function DashboardShellInner({ user, children }: { user: SessionUser; children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [trashOpen, setTrashOpen] = useState(false)
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
@@ -43,7 +45,7 @@ function DashboardShellInner({ user, children }: { user: SessionUser; children: 
     <div className="flex min-h-screen w-full bg-[#F8FAFA] dark:bg-[#121313]">
       <aside className="hidden w-72 shrink-0 border-r border-slate-200/60 dark:border-slate-850/60 bg-white dark:bg-[#1C1D1D] md:sticky md:top-0 md:block md:h-screen md:overflow-y-auto">
         <div className="p-4 h-full">
-          <SidebarContent user={user} />
+          <SidebarContent user={user} onOpenTrash={() => setTrashOpen(true)} />
         </div>
       </aside>
 
@@ -73,10 +75,19 @@ function DashboardShellInner({ user, children }: { user: SessionUser; children: 
               </Button>
             </div>
 
-            <SidebarContent user={user} onNavigate={() => setMenuOpen(false)} />
+            <SidebarContent
+              user={user}
+              onNavigate={() => setMenuOpen(false)}
+              onOpenTrash={() => {
+                setMenuOpen(false)
+                setTrashOpen(true)
+              }}
+            />
           </div>
         </div>
       ) : null}
+
+      <TrashPanel open={trashOpen} onClose={() => setTrashOpen(false)} />
     </div>
   )
 }

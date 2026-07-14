@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import type { TaskPriority, TaskStatus, UserRole } from "@prisma/client"
 import {
@@ -35,6 +35,10 @@ import {
   Clock,
   UserPlus
 } from "lucide-react"
+
+function getCurrentTimestamp() {
+  return new Date().getTime()
+}
 
 type UserLite = { id: string; name: string; username: string; role: UserRole }
 
@@ -117,48 +121,64 @@ export default function TaskModal(props: {
     if (!task) return false
     return canAdmin || task.assignedUsers.some((u) => u.id === currentUser.id)
   }, [canAdmin, currentUser.id, task])
+  const canTrash = useMemo(() => {
+    if (!task) return false
+    return canAdmin || task.assignedUsers.some((u) => u.id === currentUser.id)
+  }, [canAdmin, currentUser.id, task])
 
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [assignedUserIds, setAssignedUserIds] = useState<string[]>([])
-  const [status, setStatus] = useState<TaskStatus>("PENDING")
-  const [priority, setPriority] = useState<TaskPriority>("MEDIUM")
-  const [dueDate, setDueDate] = useState("")
-  const [comment, setComment] = useState("")
-  const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-
-  const [uploadMode, setUploadMode] = useState<"file" | "link" | null>(null)
-  const [filesToUpload, setFilesToUpload] = useState<File[]>([])
-  const [linkUrl, setLinkUrl] = useState("")
-  const [linkName, setLinkName] = useState("")
-  const [attaching, setAttaching] = useState(false)
-
-  useEffect(() => {
-    if (!open) return
-    setUploadMode(null)
-    setFilesToUpload([])
-    setLinkUrl("")
-    setLinkName("")
-    if (mode === "create") {
-      setTitle("")
-      setDescription("")
-      setAssignedUserIds([])
-      setStatus("PENDING")
-      setPriority("MEDIUM")
-      setDueDate("")
-      setComment("")
-      return
+  function createInitialState() {
+    if (mode === "detail" && task) {
+      return {
+        title: task.title,
+        description: task.description ?? "",
+        assignedUserIds: task.assignedUsers.map((u) => u.id),
+        status: task.status,
+        priority: task.priority,
+        dueDate: toInputDate(task.dueDate),
+        comment: "",
+        saving: false,
+        deleting: false,
+        uploadMode: null as "file" | "link" | null,
+        filesToUpload: [] as File[],
+        linkUrl: "",
+        linkName: "",
+        attaching: false
+      }
     }
-    if (!task) return
-    setTitle(task.title)
-    setDescription(task.description ?? "")
-    setAssignedUserIds(task.assignedUsers.map((u) => u.id))
-    setStatus(task.status)
-    setPriority(task.priority)
-    setDueDate(toInputDate(task.dueDate))
-    setComment("")
-  }, [open, mode, task, users])
+
+    return {
+      title: "",
+      description: "",
+      assignedUserIds: [] as string[],
+      status: "PENDING" as TaskStatus,
+      priority: "MEDIUM" as TaskPriority,
+      dueDate: "",
+      comment: "",
+      saving: false,
+      deleting: false,
+      uploadMode: null as "file" | "link" | null,
+      filesToUpload: [] as File[],
+      linkUrl: "",
+      linkName: "",
+      attaching: false
+    }
+  }
+
+  const [title, setTitle] = useState(() => createInitialState().title)
+  const [description, setDescription] = useState(() => createInitialState().description)
+  const [assignedUserIds, setAssignedUserIds] = useState<string[]>(() => createInitialState().assignedUserIds)
+  const [status, setStatus] = useState<TaskStatus>(() => createInitialState().status)
+  const [priority, setPriority] = useState<TaskPriority>(() => createInitialState().priority)
+  const [dueDate, setDueDate] = useState(() => createInitialState().dueDate)
+  const [comment, setComment] = useState(() => createInitialState().comment)
+  const [saving, setSaving] = useState(() => createInitialState().saving)
+  const [deleting, setDeleting] = useState(() => createInitialState().deleting)
+
+  const [uploadMode, setUploadMode] = useState<"file" | "link" | null>(() => createInitialState().uploadMode)
+  const [filesToUpload, setFilesToUpload] = useState<File[]>(() => createInitialState().filesToUpload)
+  const [linkUrl, setLinkUrl] = useState(() => createInitialState().linkUrl)
+  const [linkName, setLinkName] = useState(() => createInitialState().linkName)
+  const [attaching, setAttaching] = useState(() => createInitialState().attaching)
 
   async function create() {
     if (!props.onCreate) return
@@ -198,7 +218,7 @@ export default function TaskModal(props: {
 
   async function remove() {
     if (!task || !props.onDelete) return
-    if (!confirm("¿Estás seguro de que deseas eliminar esta tarea? Esta acción no se puede deshacer.")) return
+    if (!confirm("¿Enviar esta tarea a la papelera de reciclaje? Podrás restaurarla después.")) return
     setDeleting(true)
     try {
       await props.onDelete(task.id)
@@ -260,14 +280,14 @@ export default function TaskModal(props: {
     } catch(e) {
       toast.error("Error al eliminar")
     } finally {
-      setAttaching(true)
+      setAttaching(false)
     }
   }
 
   const modalTitle = mode === "create" ? "Nueva tarea" : "Detalle de tarea"
 
   const dueDateObj = dueDate ? dueDateToDate(dueDate) : null
-  const isOverdue = Boolean(dueDateObj && status !== "DONE" && dueDateObj.getTime() < Date.now())
+  const isOverdue = Boolean(dueDateObj && status !== "DONE" && dueDateObj.getTime() < getCurrentTimestamp())
 
   // Styles maps
   const priorityStyles = {
@@ -672,7 +692,7 @@ export default function TaskModal(props: {
             {/* Bottom Actions Row */}
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-slate-100 dark:border-slate-800/80">
               <div>
-                {canAdmin && (
+                {canTrash && (
                   <Button 
                     variant="ghost" 
                     onClick={remove} 
@@ -680,7 +700,7 @@ export default function TaskModal(props: {
                     className="h-9 px-3.5 rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/20 font-poppins font-medium text-xs flex items-center gap-1.5"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    <span>Eliminar tarea</span>
+                    <span>{deleting ? "Enviando..." : "Enviar a la papelera"}</span>
                   </Button>
                 )}
               </div>

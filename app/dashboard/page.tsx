@@ -21,9 +21,10 @@ export default async function DashboardPage() {
   const endOfToday = new Date(now)
   endOfToday.setHours(23, 59, 59, 999)
 
-  const tasks = await prisma.task.findMany({
-    where: isUserDaily
+    const tasks = await prisma.task.findMany({
+      where: isUserDaily
       ? {
+          deletedAt: null,
           assignedUsers: { some: { id: user.id } },
           dueDate: { gte: startOfToday, lte: endOfToday },
           status: { in: ["PENDING", "IN_PROGRESS"] as TaskStatus[] }

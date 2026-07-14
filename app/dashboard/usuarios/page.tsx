@@ -1,4 +1,5 @@
 import { getSessionUser } from "@/lib/session"
+import { prisma } from "@/lib/prisma"
 import { Card, CardContent } from "@/components/shadcn/ui/card"
 import UsersClient from "./UsersClient"
 
@@ -19,5 +20,21 @@ export default async function UsuariosPage() {
     )
   }
 
-  return <UsersClient currentUser={user} />
+  const initialUsers = await prisma.user.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      firstName: true,
+      middleName: true,
+      lastName: true,
+      email: true,
+      phone: true,
+      username: true,
+      role: true,
+      createdAt: true
+    }
+  })
+
+  return <UsersClient currentUser={user} initialUsers={initialUsers} />
 }

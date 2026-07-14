@@ -354,6 +354,13 @@ export default function CalendarClient({
 
       {/* Task Modal Integration */}
       <TaskModal
+        key={
+          modalMode === "detail" && activeTask
+            ? `calendar-task-${activeTask.id}`
+            : modalOpen
+              ? "calendar-create-open"
+              : "calendar-modal-closed"
+        }
         open={modalOpen}
         mode={modalMode}
         task={modalMode === "detail" ? activeTask ?? undefined : undefined}

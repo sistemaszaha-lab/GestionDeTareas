@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import type { TaskPriority, TaskStatus } from "@prisma/client"
 import type { CurrentUser, TaskWithRelations, UserLite } from "@/components/tasks/task-types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/shadcn/ui/card"
@@ -17,14 +17,6 @@ function isoDateOnly(d: string | Date | null) {
   const date = d instanceof Date ? d : new Date(d)
   if (Number.isNaN(date.getTime())) return ""
   return date.toISOString().slice(0, 10)
-}
-
-function parseTags(input: string) {
-  return input
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .slice(0, 10)
 }
 
 function StatusBadge({ status }: { status: TaskStatus }) {
@@ -142,7 +134,21 @@ export default function TaskListView({
       <CardContent className="p-0">
         <div className="divide-y divide-slate-100 dark:divide-slate-800/50">
           {tasks.map((t) => (
-            <TaskRow key={t.id} task={t} users={users} currentUser={currentUser} canAdmin={canAdmin} onUpdate={onUpdate} />
+            <TaskRow
+              key={[
+                t.id,
+                t.title,
+                t.status,
+                t.priority,
+                isoDateOnly(t.dueDate),
+                t.assignedUsers.map((u) => u.id).join(",")
+              ].join("|")}
+              task={t}
+              users={users}
+              currentUser={currentUser}
+              canAdmin={canAdmin}
+              onUpdate={onUpdate}
+            />
           ))}
           {tasks.length === 0 ? (
             <div className="p-12 text-center text-xs font-semibold text-slate-400 dark:text-slate-500">
@@ -186,14 +192,7 @@ function TaskRow({
   const [dueDate, setDueDate] = useState(isoDateOnly(task.dueDate))
   const [priority, setPriority] = useState<TaskPriority>(task.priority)
   const [assignedUserIds, setAssignedUserIds] = useState(task.assignedUsers.map((u) => u.id))
- const [tags, setTags] = useState("")
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => setTitle(task.title), [task.title])
-  useEffect(() => setDueDate(isoDateOnly(task.dueDate)), [task.dueDate])
-  useEffect(() => setPriority(task.priority), [task.priority])
-  useEffect(() => setAssignedUserIds(task.assignedUsers.map((u) => u.id)), [task.assignedUsers])
-  useEffect(() => setTags(""), [])
 
   async function save(patch: Parameters<typeof onUpdate>[1]) {
     if (saving) return
@@ -208,7 +207,7 @@ function TaskRow({
   const isDone = task.status === "DONE"
   
   const dueTime = task.dueDate ? new Date(task.dueDate).getTime() : null
-  const isOverdue = Boolean(dueTime && task.status !== "DONE" && dueTime < Date.now())
+  const isOverdue = Boolean(dueTime && task.status !== "DONE" && dueTime < new Date().getTime())
 
   // Priority Styles mapping
   const priorityStyles = {

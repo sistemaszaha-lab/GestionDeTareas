@@ -43,6 +43,7 @@ export async function GET(req: Request) {
 
     const tasks = await prisma.task.findMany({
       where: {
+        deletedAt: null,
         status: { not: "DONE" }
       },
       include: {

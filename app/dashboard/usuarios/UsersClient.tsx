@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import type { UserRole } from "@prisma/client"
 import { Button } from "@/components/shadcn/ui/button"
@@ -60,10 +60,16 @@ function fullName(u: Pick<UserRow, "firstName" | "middleName" | "lastName" | "na
   return candidate || u.name
 }
 
-export default function UsersClient({ currentUser }: { currentUser: CurrentUser }) {
+export default function UsersClient({
+  currentUser,
+  initialUsers
+}: {
+  currentUser: CurrentUser
+  initialUsers: UserRow[]
+}) {
   const canAdmin = currentUser.role === "ADMIN"
-  const [users, setUsers] = useState<UserRow[]>([])
-  const [loading, setLoading] = useState(true)
+  const [users, setUsers] = useState<UserRow[]>(initialUsers)
+  const [loading, setLoading] = useState(false)
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -97,10 +103,6 @@ export default function UsersClient({ currentUser }: { currentUser: CurrentUser 
       setLoading(false)
     }
   }, [])
-
-  useEffect(() => {
-    void refresh()
-  }, [refresh])
 
   function openEdit(u: UserRow) {
     if (!canAdmin) return
@@ -318,9 +320,16 @@ export default function UsersClient({ currentUser }: { currentUser: CurrentUser 
         </>
       ) : null}
 
-      <CreateUserDialog open={createOpen} onOpenChange={setCreateOpen} currentUser={currentUser} onCreated={refresh} />
+      <CreateUserDialog
+        key={createOpen ? "create-user-open" : "create-user-closed"}
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        currentUser={currentUser}
+        onCreated={refresh}
+      />
 
       <EditUserDialog
+        key={editOpen && editUser ? `edit-user-${editUser.id}` : "edit-user-closed"}
         open={editOpen}
         onOpenChange={(o) => {
           setEditOpen(o)

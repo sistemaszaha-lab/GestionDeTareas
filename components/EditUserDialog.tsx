@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, type FormEvent } from "react"
+import { useMemo, useState, type FormEvent } from "react"
 import toast from "react-hot-toast"
 import type { UserRole } from "@prisma/client"
 import {
@@ -104,14 +104,6 @@ export default function EditUserDialog({
   const [errors, setErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string>("")
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    if (!open) return
-    setForm(initial)
-    setErrors({})
-    setFormError("")
-    setSaving(false)
-  }, [open, initial])
 
   function setField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))

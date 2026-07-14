@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, type FormEvent } from "react"
+import { useMemo, useState, type FormEvent } from "react"
 import toast from "react-hot-toast"
 import {
   Dialog,
@@ -74,14 +74,6 @@ export default function CreateUserDialog({
   const [errors, setErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string>("")
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    if (!open) return
-    setForm(defaultState)
-    setErrors({})
-    setFormError("")
-    setSaving(false)
-  }, [open, defaultState])
 
   function setField<K extends keyof CreateUserInput>(key: K, value: CreateUserInput[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))

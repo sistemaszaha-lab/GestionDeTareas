@@ -1,6 +1,6 @@
 import "./globals.css"
 import type { Metadata, Viewport } from "next"
-import ToastProvider from "@/components/ToastProvider"
+import ClientToaster from "@/components/ClientToaster"
 import PwaRegister from "@/components/PwaRegister"
 import ThemeProvider from "@/components/ThemeProvider"
 
@@ -31,12 +31,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es" data-scroll-behavior="smooth">
       <body className="font-poppins antialiased">
         <ThemeProvider>
-          <ToastProvider />
-          <PwaRegister />
           {children}
+          <ClientToaster />
+          <PwaRegister />
         </ThemeProvider>
       </body>
     </html>

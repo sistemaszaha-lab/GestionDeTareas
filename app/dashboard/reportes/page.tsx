@@ -34,10 +34,10 @@ export default async function ReportesPage() {
   const medium = tasks.filter((t) => t.priority === "MEDIUM").length
   const high = tasks.filter((t) => t.priority === "HIGH").length
 
-  const now = Date.now()
+  const now = new Date()
   const overdue = tasks.filter((t) => {
     if (t.status === "DONE" || !t.dueDate) return false
-    return new Date(t.dueDate).getTime() < now
+    return new Date(t.dueDate) < now
   }).length
 
   const efficiency = total > 0 ? Math.round((done / total) * 100) : 0
