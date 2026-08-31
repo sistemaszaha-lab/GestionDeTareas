@@ -26,6 +26,8 @@ import TaskListView from "@/components/tasks/TaskListView"
 import TaskTableView from "@/components/tasks/TaskTableView"
 import TaskTimelineView from "@/components/tasks/TaskTimelineView"
 import type { CurrentUser, TaskWithRelations, UserLite } from "@/components/tasks/task-types"
+import type { Note } from "@/components/notes/types"
+import NotesSection from "@/components/notes/NotesSection"
 import { fetchJsonOrThrow } from "@/lib/fetch-json"
 import { 
   Clock, 
@@ -86,7 +88,8 @@ export default function KanbanBoard({
   forceUserId,
   pageTitle,
   dashboardMode,
-  emptyState
+  emptyState,
+  initialNotes
 }: {
   currentUser: CurrentUser
   users: UserLite[]
@@ -95,6 +98,7 @@ export default function KanbanBoard({
   pageTitle?: string
   dashboardMode?: "default" | "userDaily"
   emptyState?: { title: string; description?: string }
+  initialNotes?: Note[]
 }) {
   const router = useRouter()
   const [tasks, setTasks] = useState<TaskWithRelations[]>(initialTasks)
@@ -106,8 +110,7 @@ export default function KanbanBoard({
   const [createOpen, setCreateOpen] = useState(false)
   const [createUserOpen, setCreateUserOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
-  const [trashSelectionStatus, setTrashSelectionStatus] = useState<TaskStatus | null>(null)
-  const [selectedTrashTaskIds, setSelectedTrashTaskIds] = useState<string[]>([])
+  const [trashTargetTask, setTrashTargetTask] = useState<TaskWithRelations | null>(null)
   const [trashConfirmOpen, setTrashConfirmOpen] = useState(false)
   const [trashSubmitting, setTrashSubmitting] = useState(false)
   const refreshAbortRef = useRef<AbortController | null>(null)
@@ -261,32 +264,18 @@ export default function KanbanBoard({
       })
   }
 
-  const selectedTrashTaskSet = useMemo(() => new Set(selectedTrashTaskIds), [selectedTrashTaskIds])
-  const selectedTrashCount = selectedTrashTaskIds.length
+  function openTrashConfirm(task: TaskWithRelations) {
+    setTrashTargetTask(task)
+    setTrashConfirmOpen(true)
+  }
 
-  function startTrashSelection(status: TaskStatus) {
-    setTrashSelectionStatus(status)
-    setSelectedTrashTaskIds([])
+  function cancelTrashConfirm() {
+    setTrashTargetTask(null)
     setTrashConfirmOpen(false)
   }
 
-  function cancelTrashSelection() {
-    setTrashSelectionStatus(null)
-    setSelectedTrashTaskIds([])
-    setTrashConfirmOpen(false)
-  }
-
-  function toggleTrashSelection(taskId: string, checked: boolean) {
-    setSelectedTrashTaskIds((prev) => {
-      const next = new Set(prev)
-      if (checked) next.add(taskId)
-      else next.delete(taskId)
-      return Array.from(next)
-    })
-  }
-
-  async function submitTrashSelection() {
-    if (!trashSelectionStatus || selectedTrashTaskIds.length === 0 || trashSubmitting) return
+  async function submitTrashSingle() {
+    if (!trashTargetTask || trashSubmitting) return
 
     setTrashSubmitting(true)
     try {
@@ -296,16 +285,16 @@ export default function KanbanBoard({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            taskIds: selectedTrashTaskIds,
-            columnId: trashSelectionStatus
+            taskIds: [trashTargetTask.id],
+            columnId: trashTargetTask.status
           })
         },
         { defaultError: "No se pudo enviar a la papelera", logTag: "POST /api/tasks/trash" }
       )
-      setTasks((prev) => prev.filter((task) => !selectedTrashTaskIds.includes(task.id)))
-      setActiveTask((prev) => (prev && selectedTrashTaskIds.includes(prev.id) ? null : prev))
-      toast.success(selectedTrashTaskIds.length === 1 ? "Tarea enviada a la papelera" : "Tareas enviadas a la papelera")
-      cancelTrashSelection()
+      setTasks((prev) => prev.filter((task) => task.id !== trashTargetTask.id))
+      setActiveTask((prev) => (prev && prev.id === trashTargetTask.id ? null : prev))
+      toast.success("Tarea enviada a la papelera")
+      cancelTrashConfirm()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Error")
     } finally {
@@ -624,7 +613,6 @@ export default function KanbanBoard({
         >
           {visibleColumns.map((col) => {
             const colTasks = tasksByStatus(col.key)
-            const isTrashSelectionActive = trashSelectionStatus === col.key
             const dotColor = 
               col.key === "PENDING" ? "bg-[#3F9EA2]" :
               col.key === "IN_PROGRESS" ? "bg-[#016B6B]" :
@@ -643,50 +631,9 @@ export default function KanbanBoard({
                         <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold border-0 px-2 py-0.5 text-[10px]">
                           {colTasks.length}
                         </Badge>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => startTrashSelection(col.key)}
-                          className="h-8 w-8 p-0 text-slate-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20"
-                          aria-label={`Enviar tareas de ${col.title} a la papelera`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
                     </div>
-
-                    {isTrashSelectionActive ? (
-                      <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-2.5 text-xs text-rose-700 dark:border-rose-900/30 dark:bg-rose-950/10 dark:text-rose-300">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-semibold">
-                            {selectedTrashCount} {selectedTrashCount === 1 ? "tarea seleccionada" : "tareas seleccionadas"}
-                          </span>
-                          <span className="text-[10px] font-medium">Modo papelera activo</span>
-                        </div>
-                        <div className="mt-2 flex items-center justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={cancelTrashSelection}
-                            className="h-8 rounded-lg border-rose-200 bg-transparent px-3 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-900/40 dark:text-rose-300 dark:hover:bg-rose-950/20"
-                          >
-                            Cancelar
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            disabled={selectedTrashCount === 0 || trashSubmitting}
-                            onClick={() => setTrashConfirmOpen(true)}
-                            className="h-8 rounded-lg bg-rose-600 px-3 text-[11px] font-semibold text-white hover:bg-rose-700"
-                          >
-                            Enviar a la papelera
-                          </Button>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
+                    </div>
                 </CardHeader>
                 <CardContent className="space-y-3 sm:space-y-4 p-3.5 sm:p-4 bg-slate-50/10 dark:bg-transparent min-h-[400px]">
                   {isInitialLoading ? (
@@ -706,9 +653,7 @@ export default function KanbanBoard({
                           onOpen={() => setActiveTask(t)}
                           onQuickStatusChange={(status) => updateTask(t.id, { status })}
                           onAddComment={async (content) => addComment(t.id, content)}
-                          selectionMode={isTrashSelectionActive}
-                          selected={selectedTrashTaskSet.has(t.id)}
-                          onSelectionChange={(next) => toggleTrashSelection(t.id, next)}
+                          onTrashTask={() => openTrashConfirm(t)}
                         />
                       ))}
                       {tasksByStatus(col.key).length === 0 ? (
@@ -725,6 +670,7 @@ export default function KanbanBoard({
               </Card>
             )
           })}
+          {initialNotes && <NotesSection initialNotes={initialNotes} />}
         </div>
       ) : null}
 
@@ -815,7 +761,7 @@ export default function KanbanBoard({
         }}
       />
 
-      <Dialog open={trashConfirmOpen} onOpenChange={setTrashConfirmOpen}>
+      <Dialog open={trashConfirmOpen} onOpenChange={(open) => { if (!open) cancelTrashConfirm(); }}>
         <DialogContent className="max-w-md rounded-2xl border-slate-200 dark:border-slate-800 dark:bg-[#1C1D1D]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-poppins font-black">
@@ -823,14 +769,14 @@ export default function KanbanBoard({
               <span>Enviar a la papelera</span>
             </DialogTitle>
             <DialogDescription className="text-sm text-slate-500 dark:text-slate-400">
-              {selectedTrashCount} {selectedTrashCount === 1 ? "tarea será" : "tareas serán"} movida{selectedTrashCount === 1 ? "" : "s"} a la papelera de reciclaje y podrás restaurarla{selectedTrashCount === 1 ? "" : "s"} después.
+              La tarea <strong className="text-slate-700 dark:text-slate-200">&ldquo;{trashTargetTask?.title}&rdquo;</strong> será movida a la papelera de reciclaje y podrás restaurarla después.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
             <Button
               type="button"
               variant="outline"
-              onClick={() => setTrashConfirmOpen(false)}
+              onClick={cancelTrashConfirm}
               disabled={trashSubmitting}
               className="rounded-xl"
             >
@@ -838,8 +784,8 @@ export default function KanbanBoard({
             </Button>
             <Button
               type="button"
-              onClick={() => void submitTrashSelection()}
-              disabled={selectedTrashCount === 0 || trashSubmitting}
+              onClick={() => void submitTrashSingle()}
+              disabled={trashSubmitting}
               className="rounded-xl bg-rose-600 text-white hover:bg-rose-700"
             >
               {trashSubmitting ? "Enviando..." : "Enviar a la papelera"}

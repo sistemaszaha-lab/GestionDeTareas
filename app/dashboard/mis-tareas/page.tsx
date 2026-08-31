@@ -23,5 +23,18 @@ export default async function MisTareasPage() {
     orderBy: { createdAt: "desc" }
   })
 
-  return <KanbanBoard currentUser={user} users={users} initialTasks={tasks as any} forceUserId={user.id} pageTitle="Mis tareas" />
+  const notes = await prisma.note.findMany({
+    where: { userId: user.id, deletedAt: null },
+    orderBy: { createdAt: "desc" }
+  })
+
+  // Date objects must be stringified for Client Components
+  const serializedNotes = notes.map((note) => ({
+    ...note,
+    createdAt: note.createdAt.toISOString(),
+    updatedAt: note.updatedAt.toISOString(),
+    deletedAt: note.deletedAt?.toISOString() || null
+  }))
+
+  return <KanbanBoard currentUser={user} users={users} initialTasks={tasks as any} forceUserId={user.id} pageTitle="Mis tareas" initialNotes={serializedNotes as any} />
 }

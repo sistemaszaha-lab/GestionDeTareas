@@ -39,5 +39,23 @@ export default async function PapeleraPage() {
     comments: task.comments ?? []
   }))
 
-  return <RecycleBinClient initialTasks={serializedTasks} nowIso={nowIso} />
+  const notes = await prisma.note.findMany({
+    where: {
+      userId: user.id,
+      deletedAt: { not: null }
+    },
+    include: {
+      deletedBy: { select: { id: true, name: true, username: true } }
+    },
+    orderBy: { deletedAt: "desc" }
+  })
+
+  const serializedNotes = notes.map((note) => ({
+    ...note,
+    createdAt: note.createdAt.toISOString(),
+    updatedAt: note.updatedAt.toISOString(),
+    deletedAt: note.deletedAt?.toISOString() || null
+  }))
+
+  return <RecycleBinClient initialTasks={serializedTasks} initialNotes={serializedNotes as any} nowIso={nowIso} />
 }

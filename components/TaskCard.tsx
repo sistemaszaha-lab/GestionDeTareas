@@ -16,7 +16,8 @@ import {
   Paperclip, 
   ChevronRight, 
   Send, 
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from "lucide-react"
 
 function getCurrentTimestamp() {
@@ -59,6 +60,7 @@ export default function TaskCard({
   onOpen,
   onQuickStatusChange,
   onAddComment,
+  onTrashTask,
   selectionMode = false,
   selected = false,
   onSelectionChange
@@ -70,6 +72,7 @@ export default function TaskCard({
   onQuickStatusChange: (status: TaskStatus) => Promise<void> | void
   onQuickAssigneeChange?: (assignedToId: string) => Promise<void>
   onAddComment?: (content: string) => Promise<void>
+  onTrashTask?: () => void
   selectionMode?: boolean
   selected?: boolean
   onSelectionChange?: (next: boolean) => void
@@ -84,6 +87,11 @@ export default function TaskCard({
   const canMove = useMemo(
     () => currentUser.role === "ADMIN" || task.assignedUsers.some((u) => u.id === currentUser.id),
     [currentUser, task.assignedUsers]
+  )
+
+  const canTrash = useMemo(
+    () => Boolean(onTrashTask) && (currentUser.role === "ADMIN" || task.assignedUsers.some((u) => u.id === currentUser.id)),
+    [currentUser, task.assignedUsers, onTrashTask]
   )
 
   const canComment = Boolean(onAddComment)
@@ -165,7 +173,7 @@ export default function TaskCard({
         selected ? "ring-2 ring-[#016B6B] dark:ring-[#3F9EA2]" : ""
       )}
     >
-      <CardContent className="p-4 space-y-4">
+      <CardContent className="px-4 pt-4 pb-3 space-y-3">
         <div className="flex items-start gap-2">
           {selectionMode ? (
             <input
@@ -257,7 +265,7 @@ export default function TaskCard({
         </div>
 
         {/* Dynamic segmented controllers */}
-        <div className="space-y-3 pt-1 border-t border-slate-100 dark:border-slate-800/65">
+        <div className="space-y-2.5 pt-0.5 border-t border-slate-100 dark:border-slate-800/65">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cambiar Estado</span>
             <button
@@ -362,7 +370,22 @@ export default function TaskCard({
           )}
 
           {/* Action Row */}
-            <div className="flex justify-end pt-1">
+            <div className="flex items-center justify-between pt-0.5">
+              {canTrash && !selectionMode ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onTrashTask}
+                  className="h-7 px-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors"
+                  aria-label={`Enviar "${task.title}" a la papelera`}
+                  title="Enviar a la papelera"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              ) : (
+                <span />
+              )}
               <Button 
                 variant="ghost" 
                 onClick={selectionMode ? undefined : onOpen} 

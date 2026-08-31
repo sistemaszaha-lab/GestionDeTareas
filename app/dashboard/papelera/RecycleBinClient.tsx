@@ -55,6 +55,7 @@ type TrashTask = {
 
 type Props = {
   initialTasks: TrashTask[]
+  initialNotes?: any[]
   nowIso: string
   embedded?: boolean
 }
@@ -155,10 +156,15 @@ function showWarnings(warnings: string[] | undefined) {
   }
 }
 
-export default function RecycleBinClient({ initialTasks, nowIso, embedded = false }: Props) {
+export default function RecycleBinClient({ initialTasks, initialNotes = [], nowIso, embedded = false }: Props) {
+  const [activeTab, setActiveTab] = useState<"tasks" | "notes">("tasks")
   const [tasks, setTasks] = useState(initialTasks)
+  const [notes, setNotes] = useState(initialNotes)
   const [query, setQuery] = useState("")
+  
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([])
+  const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([])
+  
   const [restoring, setRestoring] = useState(false)
   const [purging, setPurging] = useState(false)
   const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false)
@@ -167,10 +173,13 @@ export default function RecycleBinClient({ initialTasks, nowIso, embedded = fals
   const [fallbackTask, setFallbackTask] = useState<TrashTask | null>(null)
   const [fallbackColumn, setFallbackColumn] = useState<TaskStatus>("PENDING")
   const [taskIdsPendingPermanentDelete, setTaskIdsPendingPermanentDelete] = useState<string[]>([])
+  const [noteIdsPendingPermanentDelete, setNoteIdsPendingPermanentDelete] = useState<string[]>([])
 
   const boardLabel = "Tablero general"
   const selectedTaskSet = useMemo(() => new Set(selectedTaskIds), [selectedTaskIds])
-  const selectedCount = selectedTaskIds.length
+  const selectedCount = activeTab === "tasks" ? selectedTaskIds.length : selectedNoteIds.length
+
+  const selectedNoteSet = useMemo(() => new Set(selectedNoteIds), [selectedNoteIds])
 
   const filteredTasks = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -194,6 +203,23 @@ export default function RecycleBinClient({ initialTasks, nowIso, embedded = fals
     })
   }, [boardLabel, query, tasks])
 
+  const filteredNotes = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return notes
+
+    return notes.filter((note) => {
+      const haystack = [
+        note.title,
+        note.description ?? "",
+        note.deletedBy?.name ?? ""
+      ]
+        .join(" ")
+        .toLowerCase()
+
+      return haystack.includes(q)
+    })
+  }, [query, notes])
+
   function toggleSelection(taskId: string, checked: boolean) {
     setSelectedTaskIds((prev) => {
       const next = new Set(prev)
@@ -205,14 +231,30 @@ export default function RecycleBinClient({ initialTasks, nowIso, embedded = fals
 
   function clearSelection() {
     setSelectedTaskIds([])
+    setSelectedNoteIds([])
     setRestoreConfirmOpen(false)
     setPermanentConfirmOpen(false)
     setTaskIdsPendingPermanentDelete([])
+    setNoteIdsPendingPermanentDelete([])
   }
 
   function removeTasksFromState(taskIds: string[]) {
     setTasks((prev) => prev.filter((task) => !taskIds.includes(task.id)))
     setSelectedTaskIds((prev) => prev.filter((taskId) => !taskIds.includes(taskId)))
+  }
+
+  function removeNotesFromState(noteIds: string[]) {
+    setNotes((prev) => prev.filter((note) => !noteIds.includes(note.id)))
+    setSelectedNoteIds((prev) => prev.filter((noteId) => !noteIds.includes(noteId)))
+  }
+
+  function toggleNoteSelection(noteId: string, checked: boolean) {
+    setSelectedNoteIds((prev) => {
+      const next = new Set(prev)
+      if (checked) next.add(noteId)
+      else next.delete(noteId)
+      return Array.from(next)
+    })
   }
 
   async function restoreSelectedTasks(taskIds: string[], columnId?: TaskStatus) {
@@ -251,8 +293,38 @@ export default function RecycleBinClient({ initialTasks, nowIso, embedded = fals
     }
   }
 
-  function openPermanentDeleteDialog(taskIds: string[]) {
-    setTaskIdsPendingPermanentDelete(taskIds)
+  async function restoreSelectedNotes(noteIds: string[]) {
+    if (noteIds.length === 0 || restoring) return
+
+    setRestoring(true)
+    try {
+      const response = await fetchJsonOrThrow<RestoreResponse>(
+        "/api/notes/trash/restore",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ noteIds })
+        },
+        { defaultError: "No se pudo restaurar", logTag: "POST /api/notes/trash/restore" }
+      )
+
+      removeNotesFromState(noteIds)
+      setRestoreConfirmOpen(false)
+      toast.success(noteIds.length === 1 ? "Nota restaurada" : "Notas restauradas")
+      showWarnings(response.warnings)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error")
+    } finally {
+      setRestoring(false)
+    }
+  }
+
+  function openPermanentDeleteDialog(ids: string[]) {
+    if (activeTab === "tasks") {
+      setTaskIdsPendingPermanentDelete(ids)
+    } else {
+      setNoteIdsPendingPermanentDelete(ids)
+    }
     setPermanentConfirmOpen(true)
   }
 
@@ -283,6 +355,33 @@ export default function RecycleBinClient({ initialTasks, nowIso, embedded = fals
     }
   }
 
+  async function permanentlyDeleteSelectedNotes(noteIds: string[]) {
+    if (noteIds.length === 0 || purging) return
+
+    setPurging(true)
+    try {
+      const response = await fetchJsonOrThrow<PermanentDeleteResponse>(
+        "/api/notes/trash/permanent",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ noteIds })
+        },
+        { defaultError: "No se pudo eliminar permanentemente", logTag: "POST /api/notes/trash/permanent" }
+      )
+
+      removeNotesFromState(noteIds)
+      setPermanentConfirmOpen(false)
+      setNoteIdsPendingPermanentDelete([])
+      toast.success(noteIds.length === 1 ? "Nota eliminada permanentemente" : "Notas eliminadas permanentemente")
+      showWarnings(response.warnings)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error")
+    } finally {
+      setPurging(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {!embedded ? (
@@ -297,23 +396,53 @@ export default function RecycleBinClient({ initialTasks, nowIso, embedded = fals
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge className="bg-slate-100 text-slate-600 border-0 dark:bg-slate-800 dark:text-slate-300">
-            {tasks.length} {tasks.length === 1 ? "tarea" : "tareas"}
+            {activeTab === "tasks" ? tasks.length : notes.length} {activeTab === "tasks" ? (tasks.length === 1 ? "tarea" : "tareas") : (notes.length === 1 ? "nota" : "notas")}
           </Badge>
-          <Badge className="bg-[#016B6B]/10 text-[#016B6B] border-0 dark:bg-[#3F9EA2]/10 dark:text-[#3F9EA2]">
-            {boardLabel}
-          </Badge>
+          {activeTab === "tasks" && (
+            <Badge className="bg-[#016B6B]/10 text-[#016B6B] border-0 dark:bg-[#3F9EA2]/10 dark:text-[#3F9EA2]">
+              {boardLabel}
+            </Badge>
+          )}
         </div>
       </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
           <Badge className="bg-slate-100 text-slate-600 border-0 dark:bg-slate-800 dark:text-slate-300">
-            {tasks.length} {tasks.length === 1 ? "tarea" : "tareas"}
+            {activeTab === "tasks" ? tasks.length : notes.length} {activeTab === "tasks" ? (tasks.length === 1 ? "tarea" : "tareas") : (notes.length === 1 ? "nota" : "notas")}
           </Badge>
-          <Badge className="bg-[#016B6B]/10 text-[#016B6B] border-0 dark:bg-[#3F9EA2]/10 dark:text-[#3F9EA2]">
-            {boardLabel}
-          </Badge>
+          {activeTab === "tasks" && (
+            <Badge className="bg-[#016B6B]/10 text-[#016B6B] border-0 dark:bg-[#3F9EA2]/10 dark:text-[#3F9EA2]">
+              {boardLabel}
+            </Badge>
+          )}
         </div>
       )}
+
+      {/* Tabs */}
+      <div className="flex border-b border-slate-200 dark:border-slate-800">
+        <button
+          className={cn(
+            "px-4 py-2 text-sm font-semibold border-b-2 transition-colors",
+            activeTab === "tasks" 
+              ? "border-[#016B6B] text-[#016B6B] dark:border-[#3F9EA2] dark:text-[#3F9EA2]" 
+              : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+          )}
+          onClick={() => { setActiveTab("tasks"); clearSelection(); }}
+        >
+          Tareas
+        </button>
+        <button
+          className={cn(
+            "px-4 py-2 text-sm font-semibold border-b-2 transition-colors",
+            activeTab === "notes" 
+              ? "border-[#016B6B] text-[#016B6B] dark:border-[#3F9EA2] dark:text-[#3F9EA2]" 
+              : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+          )}
+          onClick={() => { setActiveTab("notes"); clearSelection(); }}
+        >
+          Notas
+        </button>
+      </div>
 
       <Card className="border-slate-200/60 dark:border-slate-800/60 bg-white dark:bg-[#1C1D1D] shadow-sm rounded-2xl">
         <CardContent className="p-4">
@@ -345,7 +474,7 @@ export default function RecycleBinClient({ initialTasks, nowIso, embedded = fals
               </Button>
               <Button
                 type="button"
-                onClick={() => openPermanentDeleteDialog(selectedTaskIds)}
+                onClick={() => openPermanentDeleteDialog(activeTab === "tasks" ? selectedTaskIds : selectedNoteIds)}
                 disabled={selectedCount === 0 || purging}
                 className="rounded-xl bg-rose-600 text-white hover:bg-rose-700"
               >
@@ -357,7 +486,7 @@ export default function RecycleBinClient({ initialTasks, nowIso, embedded = fals
       </Card>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {filteredTasks.map((task) => {
+        {activeTab === "tasks" && filteredTasks.map((task) => {
           const attachments = normalizeAttachments(task.attachments)
           const deadlineInfo = getDeadlineInfo(task.deletedAt, nowIso)
 
@@ -512,7 +641,95 @@ export default function RecycleBinClient({ initialTasks, nowIso, embedded = fals
           )
         })}
 
-        {filteredTasks.length === 0 ? (
+        {activeTab === "notes" && filteredNotes.map((note: any) => {
+          const deadlineInfo = getDeadlineInfo(note.deletedAt, nowIso)
+          return (
+            <Card
+              key={note.id}
+              className={cn(
+                "overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm dark:border-slate-800/60 dark:bg-[#1C1D1D]",
+                selectedNoteSet.has(note.id) ? "ring-2 ring-[#016B6B] dark:ring-[#3F9EA2]" : ""
+              )}
+            >
+              <CardHeader className="border-b border-slate-100/80 bg-slate-50/40 p-4 dark:border-slate-800/60 dark:bg-[#121313]/10">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        aria-label={`Seleccionar ${note.title}`}
+                        type="checkbox"
+                        checked={selectedNoteSet.has(note.id)}
+                        onChange={(e) => toggleNoteSelection(note.id, e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-[#016B6B] focus:ring-[#016B6B] accent-[#016B6B]"
+                      />
+                      <CardTitle className="line-clamp-2 text-sm font-poppins font-black tracking-tight text-slate-800 dark:text-slate-100">
+                        {note.title || "Sin título"}
+                      </CardTitle>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {deadlineInfo.isExpired ? (
+                        <Badge className="bg-rose-100 text-rose-600 border-0 text-[9px] font-bold uppercase tracking-wider dark:bg-rose-950/20 dark:text-rose-300">
+                          Vencida
+                        </Badge>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => void restoreSelectedNotes([note.id])}
+                      disabled={restoring}
+                      className="h-8 w-8 p-0 text-[#016B6B] hover:bg-[#016B6B]/5 hover:text-[#3F9EA2]"
+                      aria-label={`Restaurar nota`}
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openPermanentDeleteDialog([note.id])}
+                      disabled={purging}
+                      className="h-8 w-8 p-0 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/20"
+                      aria-label={`Eliminar permanentemente nota`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 p-4">
+                {note.description ? (
+                  <p className="line-clamp-3 text-sm text-slate-600 dark:text-slate-400">{note.description}</p>
+                ) : (
+                  <p className="text-sm text-slate-400">Sin descripción</p>
+                )}
+                <div className="grid gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <CalendarClock className="h-3.5 w-3.5" />
+                    <span>Eliminada: {formatDate(note.deletedAt)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    <span>Límite: {deadlineInfo.deadline}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#016B6B]/10 text-[9px] font-black text-[#016B6B]">30</span>
+                    <span>{deadlineInfo.remaining}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-3.5 w-3.5" />
+                    <span>Eliminó: {note.deletedBy?.name ?? "Usuario no disponible"}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
+
+        {activeTab === "tasks" && filteredTasks.length === 0 ? (
           <Card className="col-span-full rounded-2xl border-dashed border-slate-200 bg-white/60 dark:border-slate-800 dark:bg-[#1C1D1D]/50">
             <CardContent className="flex min-h-[220px] items-center justify-center p-8 text-center">
               <div className="space-y-2">
@@ -520,6 +737,120 @@ export default function RecycleBinClient({ initialTasks, nowIso, embedded = fals
                   <Trash2 className="h-5 w-5" />
                 </div>
                 <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">No hay tareas en la papelera</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {activeTab === "notes" && filteredNotes.length === 0 ? (
+          <Card className="col-span-full rounded-2xl border-dashed border-slate-200 bg-white/60 dark:border-slate-800 dark:bg-[#1C1D1D]/50">
+            <CardContent className="flex min-h-[220px] items-center justify-center p-8 text-center">
+              <div className="space-y-2">
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+                  <Trash2 className="h-5 w-5" />
+                </div>
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">No hay notas en la papelera</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {activeTab === "notes" && filteredNotes.map((note: any) => {
+          const deadlineInfo = getDeadlineInfo(note.deletedAt, nowIso)
+          return (
+            <Card
+              key={note.id}
+              className={cn(
+                "overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm dark:border-slate-800/60 dark:bg-[#1C1D1D]",
+                selectedNoteSet.has(note.id) ? "ring-2 ring-[#016B6B] dark:ring-[#3F9EA2]" : ""
+              )}
+            >
+              <CardHeader className="border-b border-slate-100/80 bg-slate-50/40 p-4 dark:border-slate-800/60 dark:bg-[#121313]/10">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        aria-label={`Seleccionar ${note.title}`}
+                        type="checkbox"
+                        checked={selectedNoteSet.has(note.id)}
+                        onChange={(e) => toggleNoteSelection(note.id, e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-[#016B6B] focus:ring-[#016B6B] accent-[#016B6B]"
+                      />
+                      <CardTitle className="line-clamp-2 text-sm font-poppins font-black tracking-tight text-slate-800 dark:text-slate-100">
+                        {note.title || "Sin título"}
+                      </CardTitle>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {deadlineInfo.isExpired ? (
+                        <Badge className="bg-rose-100 text-rose-600 border-0 text-[9px] font-bold uppercase tracking-wider dark:bg-rose-950/20 dark:text-rose-300">
+                          Vencida
+                        </Badge>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => void restoreSelectedNotes([note.id])}
+                      disabled={restoring}
+                      className="h-8 w-8 p-0 text-[#016B6B] hover:bg-[#016B6B]/5 hover:text-[#3F9EA2]"
+                      aria-label={`Restaurar nota`}
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openPermanentDeleteDialog([note.id])}
+                      disabled={purging}
+                      className="h-8 w-8 p-0 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/20"
+                      aria-label={`Eliminar permanentemente nota`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 p-4">
+                {note.description ? (
+                  <p className="line-clamp-3 text-sm text-slate-600 dark:text-slate-400">{note.description}</p>
+                ) : (
+                  <p className="text-sm text-slate-400">Sin descripción</p>
+                )}
+                <div className="grid gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <CalendarClock className="h-3.5 w-3.5" />
+                    <span>Eliminada: {formatDate(note.deletedAt)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    <span>Límite: {deadlineInfo.deadline}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#016B6B]/10 text-[9px] font-black text-[#016B6B]">30</span>
+                    <span>{deadlineInfo.remaining}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-3.5 w-3.5" />
+                    <span>Eliminó: {note.deletedBy?.name ?? "Usuario no disponible"}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
+
+        {activeTab === "notes" && filteredNotes.length === 0 ? (
+          <Card className="col-span-full rounded-2xl border-dashed border-slate-200 bg-white/60 dark:border-slate-800 dark:bg-[#1C1D1D]/50">
+            <CardContent className="flex min-h-[220px] items-center justify-center p-8 text-center">
+              <div className="space-y-2">
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+                  <Trash2 className="h-5 w-5" />
+                </div>
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">No hay notas en la papelera</p>
               </div>
             </CardContent>
           </Card>
@@ -561,7 +892,10 @@ export default function RecycleBinClient({ initialTasks, nowIso, embedded = fals
               <span>Eliminar permanentemente</span>
             </DialogTitle>
             <DialogDescription className="text-sm text-slate-500 dark:text-slate-400">
-              {taskIdsPendingPermanentDelete.length} {taskIdsPendingPermanentDelete.length === 1 ? "tarea será eliminada" : "tareas serán eliminadas"} de forma definitiva. Esta acción no se puede deshacer y también retirará sus adjuntos asociados cuando corresponda.
+              {activeTab === "tasks" 
+                ? `${taskIdsPendingPermanentDelete.length} ${taskIdsPendingPermanentDelete.length === 1 ? "tarea será eliminada" : "tareas serán eliminadas"}`
+                : `${noteIdsPendingPermanentDelete.length} ${noteIdsPendingPermanentDelete.length === 1 ? "nota será eliminada" : "notas serán eliminadas"}`
+              } de forma definitiva. Esta acción no se puede deshacer.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
@@ -570,8 +904,8 @@ export default function RecycleBinClient({ initialTasks, nowIso, embedded = fals
             </Button>
             <Button
               type="button"
-              onClick={() => void permanentlyDeleteSelectedTasks(taskIdsPendingPermanentDelete)}
-              disabled={taskIdsPendingPermanentDelete.length === 0 || purging}
+              onClick={() => activeTab === "tasks" ? permanentlyDeleteSelectedTasks(taskIdsPendingPermanentDelete) : permanentlyDeleteSelectedNotes(noteIdsPendingPermanentDelete)}
+              disabled={(activeTab === "tasks" ? taskIdsPendingPermanentDelete.length : noteIdsPendingPermanentDelete.length) === 0 || purging}
               className="rounded-xl bg-rose-600 text-white hover:bg-rose-700"
             >
               {purging ? "Eliminando..." : "Eliminar permanentemente"}

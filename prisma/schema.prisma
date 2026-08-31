@@ -25,6 +25,8 @@ model User {
   sessions      Session[]
   tasksDeleted  Task[]    @relation("TaskDeletedBy")
   tasksAssigned Task[]    @relation("TaskAssignedUsers")
+  notes         Note[]    @relation("UserNotes")
+  notesDeleted  Note[]    @relation("NoteDeletedBy")
 }
 
 model Account {
@@ -116,4 +118,23 @@ enum TaskPriority {
   LOW
   MEDIUM
   HIGH
+}
+
+model Note {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  color       String?
+  isPinned    Boolean   @default(false)
+  order       Int       @default(0)
+  userId      String
+  user        User      @relation("UserNotes", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  deletedById String?
+  deletedBy   User?     @relation("NoteDeletedBy", fields: [deletedById], references: [id])
+
+  @@index([userId])
+  @@index([deletedAt])
 }

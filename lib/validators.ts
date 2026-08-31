@@ -145,3 +145,31 @@ export const updateUserSchema = z
       })
     }
   })
+
+export const createNoteSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().max(5000).optional().nullable(),
+  color: z.string().trim().max(50).optional().nullable(),
+  isPinned: z.boolean().optional(),
+  order: z.number().optional()
+})
+
+export const updateNoteSchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  description: z.string().trim().max(5000).optional().nullable(),
+  color: z.string().trim().max(50).optional().nullable(),
+  isPinned: z.boolean().optional(),
+  order: z.number().optional()
+})
+
+export const noteTrashBulkSchema = z.object({
+  noteIds: z.array(z.string().trim().min(1)).min(1)
+})
+
+export const noteRestoreBulkSchema = z.object({
+  noteIds: z.array(z.string().trim().min(1)).min(1)
+})
+
+export const notePermanentDeleteSchema = z.object({
+  noteIds: z.array(z.string().trim().min(1)).min(1)
+})

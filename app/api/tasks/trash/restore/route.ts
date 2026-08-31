@@ -6,13 +6,25 @@ import type { NextRequest } from "next/server"
 
 export const runtime = "nodejs"
 
+/**
+ * POST /api/tasks/trash/restore
+ *
+ * Body:
+ *   { taskIds: string[] }                  → bulk restore to original columns
+ *   { taskIds: [string], columnId: string } → restore a single task to a specific column
+ */
 export async function POST(req: NextRequest) {
   try {
     const user = await requireSession(req)
     if (!user) return jsonError("Unauthorized", 401)
 
     const body = await req.json().catch(() => null)
-    const parsed = taskRestoreBulkSchema.extend({ columnId: taskRestoreSingleSchema.shape.columnId.optional() }).safeParse(body)
+
+    const schema = taskRestoreBulkSchema.extend({
+      columnId: taskRestoreSingleSchema.shape.columnId
+    })
+
+    const parsed = schema.safeParse(body)
     if (!parsed.success) return jsonError("Datos inválidos", 400)
 
     if (parsed.data.columnId) {
