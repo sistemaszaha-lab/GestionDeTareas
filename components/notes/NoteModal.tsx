@@ -17,46 +17,38 @@ type Props = {
 }
 
 export default function NoteModal({ note, open, onClose, onSave, onTrash }: Props) {
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [color, setColor] = useState<string | null>(null)
+  const [title, setTitle] = useState(note?.title ?? "")
+  const [description, setDescription] = useState(note?.description ?? "")
+  const [color, setColor] = useState<string | null>(note?.color ?? null)
   
-  const [isEditingTitle, setIsEditingTitle] = useState(false)
-  const [isEditingDesc, setIsEditingDesc] = useState(false)
+  const [isEditingTitle, setIsEditingTitle] = useState(!note)
+  const [isEditingDesc, setIsEditingDesc] = useState(!note)
   const [saving, setSaving] = useState(false)
   
   const titleInputRef = useRef<HTMLInputElement>(null)
-  const descInputRef = useRef<HTMLTextAreaElement>(null)
-
-  useEffect(() => {
-    if (open) {
-      setTitle(note?.title ?? "")
-      setDescription(note?.description ?? "")
-      setColor(note?.color ?? null)
-      setIsEditingTitle(!note)
-      setIsEditingDesc(!note)
-    }
-  }, [open, note])
 
   useEffect(() => {
     if (isEditingTitle) titleInputRef.current?.focus()
   }, [isEditingTitle])
-
-  useEffect(() => {
-    if (isEditingDesc) descInputRef.current?.focus()
-  }, [isEditingDesc])
 
   async function handleSave() {
     if (!title.trim() && !note) return // Don't save empty new note
     setSaving(true)
     try {
       await onSave({ title: title.trim() || "Nueva nota", description: description.trim() || null, color })
-      if (!note) {
-        onClose()
-      } else {
-        setIsEditingTitle(false)
-        setIsEditingDesc(false)
-      }
+      onClose()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleColorChange(nextColor: string | null) {
+    setColor(nextColor)
+    if (!note) return
+
+    setSaving(true)
+    try {
+      await onSave({ color: nextColor })
     } finally {
       setSaving(false)
     }
@@ -73,13 +65,12 @@ export default function NoteModal({ note, open, onClose, onSave, onTrash }: Prop
               ref={titleInputRef}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              onBlur={handleSave}
               placeholder="Título de la nota"
               className="w-full bg-transparent text-lg font-poppins font-black tracking-tight text-slate-800 dark:text-slate-100 outline-none placeholder:text-slate-400"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault()
-                  handleSave()
+                  setIsEditingDesc(true)
                 }
               }}
             />
@@ -113,7 +104,8 @@ export default function NoteModal({ note, open, onClose, onSave, onTrash }: Prop
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => { setColor(null); if (note) onSave({ color: null }); }}
+              onClick={() => handleColorChange(null)}
+              disabled={saving}
               className={`h-6 w-6 rounded-full border-2 ${color === null ? 'border-slate-400 ring-2 ring-slate-200 dark:ring-slate-700' : 'border-slate-200 dark:border-slate-700'} bg-white dark:bg-[#1C1D1D] transition-all`}
               aria-label="Sin color"
             />
@@ -121,11 +113,8 @@ export default function NoteModal({ note, open, onClose, onSave, onTrash }: Prop
               <button
                 key={c.id}
                 type="button"
-                onClick={(e) => { 
-                  e.stopPropagation();
-                  setColor(c.id); 
-                  if (note) onSave({ color: c.id }); 
-                }}
+                onClick={() => handleColorChange(c.id)}
+                disabled={saving}
                 className={`h-6 w-6 rounded-full border-2 ${c.border} ${c.bg} ${color === c.id ? 'ring-2 ring-slate-400 dark:ring-slate-500 scale-110' : 'scale-100 hover:scale-105'} transition-all`}
                 aria-label={c.label}
               />
@@ -147,8 +136,11 @@ export default function NoteModal({ note, open, onClose, onSave, onTrash }: Prop
             ) : <div />}
             
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={onClose} className="rounded-xl h-9 text-xs">
-                Cerrar
+              <Button type="button" variant="outline" onClick={onClose} disabled={saving} className="rounded-xl h-9 text-xs">
+                Cancelar
+              </Button>
+              <Button type="button" onClick={handleSave} disabled={saving || (!title.trim() && !note)} className="rounded-xl h-9 text-xs bg-[#016B6B] text-white hover:bg-[#3F9EA2]">
+                {saving ? "Guardando..." : "Guardar"}
               </Button>
             </div>
           </DialogFooter>

@@ -211,12 +211,14 @@ export default function NotesSection({ initialNotes }: Props) {
         </CardContent>
       </Card>
 
-      <NoteModal 
-        open={isCreating}
-        onClose={() => setIsCreating(false)}
-        onSave={createNote}
-        onTrash={async () => {}} // Create modal won't have trash
-      />
+      {isCreating && (
+        <NoteModal
+          open={isCreating}
+          onClose={() => setIsCreating(false)}
+          onSave={createNote}
+          onTrash={async () => {}} // Create modal won't have trash
+        />
+      )}
 
       {activeNote && (
         <NoteModal

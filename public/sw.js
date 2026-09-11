@@ -46,6 +46,8 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url)
 
+  if (url.pathname.startsWith("/_next/")) return
+
   // Navigation: network-first, offline fallback
   if (request.mode === "navigate") {
     event.respondWith(
@@ -62,9 +64,8 @@ self.addEventListener("fetch", (event) => {
     return
   }
 
-  // Static assets: cache-first
+  // PWA-owned static assets: cache-first
   const isStatic =
-    url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icons/") ||
     url.pathname === "/manifest.webmanifest"
 

@@ -52,6 +52,7 @@ input, select, textarea {
 /* Tiptap Editor Styles */
 .tiptap-editor .ProseMirror {
   outline: none;
+  padding: 0.75rem;
 }
 
 .tiptap-editor p.is-editor-empty:first-child::before {
