@@ -39,7 +39,6 @@ export default function CreateTaskDialog({
     assignedUserIds: string[]
     priority: TaskPriority
     dueDate: string | null
-    tags?: string[]
   }) => Promise<void>
 }) {
   const canAdmin = currentUser.role === "ADMIN"
@@ -57,7 +56,6 @@ export default function CreateTaskDialog({
       assignedUserIds: defaultAssignedUserIds,
       priority: "MEDIUM" as TaskPriority,
       dueDate: "",
-      tags: "",
       saving: false
     }
   }
@@ -67,15 +65,7 @@ export default function CreateTaskDialog({
   const [assignedUserIds, setAssignedUserIds] = useState<string[]>(() => createInitialState().assignedUserIds)
   const [priority, setPriority] = useState<TaskPriority>(() => createInitialState().priority)
   const [dueDate, setDueDate] = useState(() => createInitialState().dueDate)
-  const [tags, setTags] = useState(() => createInitialState().tags)
   const [saving, setSaving] = useState(() => createInitialState().saving)
-
-  function parseTags(input: string) {
-    return input
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean)
-  }
 
   async function submit(e?: FormEvent) {
     e?.preventDefault()
@@ -88,8 +78,7 @@ export default function CreateTaskDialog({
         description: description.trim() ? description.trim() : null,
         assignedUserIds: canAdmin ? assignedUserIds : [currentUser.id],
         priority,
-        dueDate: dueDate ? dueDate : null,
-        tags: tags.trim() ? parseTags(tags) : []
+        dueDate: dueDate ? dueDate : null
       })
       onOpenChange(false)
     } finally {
@@ -124,16 +113,6 @@ export default function CreateTaskDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Agrega contexto, criterios de aceptación, links…"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="task-tags">Tags</Label>
-            <Input
-              id="task-tags"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="bug, urgente, cliente-x"
             />
           </div>
 
