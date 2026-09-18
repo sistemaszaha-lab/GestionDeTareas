@@ -5,21 +5,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/shadcn/ui/button"
 import { Trash2 } from "lucide-react"
 import type { Note } from "./types"
-import { getNoteColor, NOTE_COLORS } from "./colors"
 import NoteEditor from "./NoteEditor"
 
 type Props = {
   note?: Note
   open: boolean
   onClose: () => void
-  onSave: (patch: { title?: string; description?: string | null; color?: string | null }) => Promise<void>
+  onSave: (patch: { title?: string; description?: string | null }) => Promise<void>
   onTrash: () => Promise<void>
 }
 
 export default function NoteModal({ note, open, onClose, onSave, onTrash }: Props) {
   const [title, setTitle] = useState(note?.title ?? "")
   const [description, setDescription] = useState(note?.description ?? "")
-  const [color, setColor] = useState<string | null>(note?.color ?? null)
   
   const [isEditingTitle, setIsEditingTitle] = useState(!note)
   const [isEditingDesc, setIsEditingDesc] = useState(!note)
@@ -35,30 +33,16 @@ export default function NoteModal({ note, open, onClose, onSave, onTrash }: Prop
     if (!title.trim() && !note) return // Don't save empty new note
     setSaving(true)
     try {
-      await onSave({ title: title.trim() || "Nueva nota", description: description.trim() || null, color })
+      await onSave({ title: title.trim() || "Nueva nota", description: description.trim() || null })
       onClose()
     } finally {
       setSaving(false)
     }
   }
 
-  async function handleColorChange(nextColor: string | null) {
-    setColor(nextColor)
-    if (!note) return
-
-    setSaving(true)
-    try {
-      await onSave({ color: nextColor })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const { bg, border } = getNoteColor(color)
-
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className={`max-w-md rounded-2xl border ${border} ${bg} transition-colors duration-300`}>
+      <DialogContent className="max-w-md rounded-2xl border border-slate-200/60 bg-white transition-colors duration-300 dark:border-slate-800/60 dark:bg-[#1C1D1D]">
         <DialogHeader className="mb-2">
           {isEditingTitle ? (
             <input
@@ -100,27 +84,6 @@ export default function NoteModal({ note, open, onClose, onSave, onTrash }: Prop
         </div>
 
         <div className="mt-4 flex flex-col gap-4 relative z-20">
-          {/* Color selector */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => handleColorChange(null)}
-              disabled={saving}
-              className={`h-6 w-6 rounded-full border-2 ${color === null ? 'border-slate-400 ring-2 ring-slate-200 dark:ring-slate-700' : 'border-slate-200 dark:border-slate-700'} bg-white dark:bg-[#1C1D1D] transition-all`}
-              aria-label="Sin color"
-            />
-            {NOTE_COLORS.map(c => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => handleColorChange(c.id)}
-                disabled={saving}
-                className={`h-6 w-6 rounded-full border-2 ${c.border} ${c.bg} ${color === c.id ? 'ring-2 ring-slate-400 dark:ring-slate-500 scale-110' : 'scale-100 hover:scale-105'} transition-all`}
-                aria-label={c.label}
-              />
-            ))}
-          </div>
-
           <DialogFooter className="flex items-center sm:justify-between w-full gap-2">
             {note ? (
               <Button

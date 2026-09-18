@@ -94,7 +94,6 @@ export default function NotesSection({ initialNotes }: Props) {
           body: JSON.stringify({
             title: `${note.title} (copia)`,
             description: note.description,
-            color: note.color,
             isPinned: note.isPinned,
             order: note.order
           })

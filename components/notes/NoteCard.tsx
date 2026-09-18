@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react"
 import { Card, CardContent } from "@/components/shadcn/ui/card"
 import { MoreHorizontal, Pin, Copy, ArrowUp, ArrowDown, Trash2 } from "lucide-react"
 import type { Note } from "./types"
-import { getNoteColor } from "./colors"
 import DOMPurify from "dompurify"
 
 type Props = {
@@ -17,7 +16,6 @@ type Props = {
 }
 
 export default function NoteCard({ note, onClick, onDuplicate, onPin, onMove, onTrash }: Props) {
-  const { bg, border } = getNoteColor(note.color)
   const [showMenu, setShowMenu] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -34,7 +32,7 @@ export default function NoteCard({ note, onClick, onDuplicate, onPin, onMove, on
   return (
     <Card 
       onClick={onClick}
-      className={`relative overflow-visible rounded-2xl border ${border} ${bg} shadow-sm transition-transform duration-200 hover:-translate-y-0.5 cursor-pointer group ${showMenu ? "z-50" : "z-auto"}`}
+      className={`relative overflow-visible rounded-2xl border border-slate-200/60 bg-white shadow-sm transition-transform duration-200 hover:-translate-y-0.5 cursor-pointer group dark:border-slate-800/60 dark:bg-[#1C1D1D] ${showMenu ? "z-50" : "z-auto"}`}
     >
       <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
         {note.isPinned && <Pin className="h-3.5 w-3.5 text-slate-400 fill-slate-400" />}
