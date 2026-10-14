@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { Plus } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/shadcn/ui/card"
@@ -27,6 +27,54 @@ export default function NotesSection({ initialNotes }: Props) {
   const [notes, setNotes] = useState<Note[]>(sortNotes(initialNotes))
   const [activeNote, setActiveNote] = useState<Note | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [dragId, setDragId] = useState<string | null>(null)
+  const [dropId, setDropId] = useState<string | null>(null)
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const suppressClickRef = useRef(false)
+
+  useEffect(() => {
+    if (!dragId) return
+    const dragged = notes.find((note) => note.id === dragId)
+    if (!dragged) return
+    const onMove = (event: PointerEvent) => {
+      suppressClickRef.current = true
+      const group = notes.filter((note) => note.isPinned === dragged.isPinned && note.id !== dragId)
+      const target = group.find((note) => {
+        const element = document.querySelector(`[data-note-id="${note.id}"]`)
+        if (!element) return false
+        const rect = element.getBoundingClientRect()
+        return event.clientX < rect.left + rect.width / 2
+      })
+      setDropId(target?.id ?? group[group.length - 1]?.id ?? null)
+      const rect = scrollerRef.current?.getBoundingClientRect()
+      if (rect && event.clientX < rect.left + 48) scrollerRef.current!.scrollLeft -= 12
+      if (rect && event.clientX > rect.right - 48) scrollerRef.current!.scrollLeft += 12
+    }
+    const onUp = async () => {
+      const targetId = dropId
+      const group = notes.filter((note) => note.isPinned === dragged.isPinned && note.id !== dragId)
+      const index = targetId ? group.findIndex((note) => note.id === targetId) : group.length
+      const nextGroup = [...group]
+      nextGroup.splice(Math.max(0, index), 0, dragged)
+      const previous = notes
+      const next = sortNotes(notes.filter((note) => note.isPinned !== dragged.isPinned).concat(nextGroup).map((note) => note.isPinned === dragged.isPinned ? { ...note, order: (nextGroup.length - nextGroup.indexOf(note)) * 10 } : note))
+      setDragId(null); setDropId(null)
+      if (suppressClickRef.current) {
+        setNotes(next)
+        try {
+          await Promise.all(nextGroup.map((note, position) => fetchJsonOrThrow(`/api/notes/${note.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order: (nextGroup.length - position) * 10 }) })))
+          toast.success("Orden de notas actualizado")
+        } catch (error) {
+          setNotes(previous)
+          toast.error(error instanceof Error ? error.message : "No se pudo guardar el orden")
+        }
+      }
+      window.setTimeout(() => { suppressClickRef.current = false }, 0)
+    }
+    window.addEventListener("pointermove", onMove)
+    window.addEventListener("pointerup", onUp, { once: true })
+    return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp) }
+  }, [dragId, dropId, notes])
 
   async function createNote(patch: { title?: string; description?: string | null; color?: string | null }) {
     try {
@@ -190,16 +238,19 @@ export default function NotesSection({ initialNotes }: Props) {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="flex gap-3 overflow-x-auto overflow-y-hidden p-3.5 sm:p-4 bg-slate-50/10 dark:bg-transparent">
+        <CardContent ref={scrollerRef} className="flex gap-3 overflow-x-auto overflow-y-hidden p-3.5 sm:p-4 bg-slate-50/10 dark:bg-transparent">
           {notes.map((note) => (
             <NoteCard 
               key={note.id} 
               note={note} 
-              onClick={() => setActiveNote(note)}
+              onClick={() => { if (suppressClickRef.current) return; setActiveNote(note) }}
               onDuplicate={() => duplicateNote(note)}
               onPin={() => togglePin(note)}
               onMove={(dir) => moveNote(note, dir)}
               onTrash={() => trashNote(note.id)}
+              onPointerDown={(event) => { if (event.button === 0 && !(event.target as HTMLElement).closest("button")) setDragId(note.id) }}
+              isDragging={dragId === note.id}
+              isDropTarget={dropId === note.id && dragId !== note.id}
             />
           ))}
           {notes.length === 0 ? (
