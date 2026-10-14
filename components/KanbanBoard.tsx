@@ -366,6 +366,18 @@ export default function KanbanBoard({
     setActiveTask((prev) => (prev?.id === taskId ? { ...prev, comments: [...prev.comments, data.comment] } : prev))
   }
 
+  async function updateComment(taskId: string, commentId: string, content: string) {
+    const data = await fetchJsonOrThrow<{ comment: any }>(`/api/comments/${commentId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content }) }, { defaultError: "No se pudo actualizar el comentario" })
+    const replace = (t: TaskWithRelations) => t.id === taskId ? { ...t, comments: t.comments.map((c) => c.id === commentId ? data.comment : c) } : t
+    setTasks((prev) => prev.map(replace)); setActiveTask((prev) => prev ? replace(prev) : prev)
+  }
+
+  async function deleteComment(taskId: string, commentId: string) {
+    await fetchJsonOrThrow(`/api/comments/${commentId}`, { method: "DELETE" }, { defaultError: "No se pudo eliminar el comentario" })
+    const remove = (t: TaskWithRelations) => t.id === taskId ? { ...t, comments: t.comments.filter((c) => c.id !== commentId) } : t
+    setTasks((prev) => prev.map(remove)); setActiveTask((prev) => prev ? remove(prev) : prev)
+  }
+
   async function addAttachment(taskId: string, formData: FormData) {
     const data = await fetchJsonOrThrow<{ attachment?: any; attachments?: any[] }>(
       `/api/tasks/${taskId}/attachments`,
@@ -604,6 +616,8 @@ export default function KanbanBoard({
 
        
 
+      {initialNotes ? <div className="w-full"><NotesSection initialNotes={initialNotes} /></div> : null}
+
       {view === "kanban" ? (
         <div
           className={[
@@ -653,6 +667,8 @@ export default function KanbanBoard({
                           onOpen={() => setActiveTask(t)}
                           onQuickStatusChange={(status) => updateTask(t.id, { status })}
                           onAddComment={async (content) => addComment(t.id, content)}
+                          onUpdateComment={(commentId, content) => updateComment(t.id, commentId, content)}
+                          onDeleteComment={(commentId) => deleteComment(t.id, commentId)}
                           onTrashTask={() => openTrashConfirm(t)}
                         />
                       ))}
@@ -670,7 +686,6 @@ export default function KanbanBoard({
               </Card>
             )
           })}
-          {initialNotes && <NotesSection initialNotes={initialNotes} />}
         </div>
       ) : null}
 
@@ -742,6 +757,14 @@ export default function KanbanBoard({
           } catch (e) {
             toast.error(e instanceof Error ? e.message : "Error")
           }
+        }}
+        onUpdateComment={async (taskId, commentId, content) => {
+          try { await updateComment(taskId, commentId, content); toast.success("Comentario actualizado") }
+          catch (e) { toast.error(e instanceof Error ? e.message : "Error"); throw e }
+        }}
+        onDeleteComment={async (taskId, commentId) => {
+          try { await deleteComment(taskId, commentId); toast.success("Comentario eliminado") }
+          catch (e) { toast.error(e instanceof Error ? e.message : "Error"); throw e }
         }}
         onAddAttachment={async (taskId, formData) => {
           try {

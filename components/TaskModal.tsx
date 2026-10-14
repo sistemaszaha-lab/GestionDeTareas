@@ -33,6 +33,9 @@ import {
   Image as ImageIcon, 
   File as FileIcon,
   Clock,
+  MoreHorizontal,
+  X,
+  Check,
   UserPlus
 } from "lucide-react"
 
@@ -111,10 +114,14 @@ export default function TaskModal(props: {
   ) => Promise<void>
   onDelete?: (id: string) => Promise<void>
   onAddComment?: (taskId: string, content: string) => Promise<void>
+  onUpdateComment?: (taskId: string, commentId: string, content: string) => Promise<void>
+  onDeleteComment?: (taskId: string, commentId: string) => Promise<void>
   onAddAttachment?: (taskId: string, formData: FormData) => Promise<void>
   onDeleteAttachment?: (taskId: string, attachmentId: string) => Promise<void>
 }) {
   const { open, mode, task, users, currentUser, onClose } = props
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editingCommentText, setEditingCommentText] = useState("")
 
   const canAdmin = currentUser.role === "ADMIN"
   const canEditStatus = useMemo(() => {
@@ -650,13 +657,9 @@ export default function TaskModal(props: {
                       <CardContent className="p-3">
                         <div className="flex items-center justify-between gap-2">
                           <div className="text-[11px] font-bold text-[#016B6B] dark:text-[#3F9EA2]">{c.user.name}</div>
-                          <div className="text-[9px] text-slate-400 font-semibold">
-                            {new Date(c.createdAt).toLocaleDateString("es-MX", { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                          </div>
+                        <div className="flex items-center gap-1 text-[9px] text-slate-400 font-semibold"><span>{new Date(c.createdAt).toLocaleDateString("es-MX", { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>{(c.user.id === currentUser.id || currentUser.role === "ADMIN") && <button type="button" onClick={() => { setEditingCommentId(editingCommentId === c.id ? null : c.id); setEditingCommentText(c.content) }} className="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-800" aria-label="Acciones del comentario"><MoreHorizontal className="h-4 w-4" /></button>}</div>
                         </div>
-                        <p className="mt-1.5 text-xs text-slate-700 dark:text-slate-350 leading-relaxed whitespace-pre-wrap">
-                          {c.content}
-                        </p>
+                        {editingCommentId === c.id ? <div className="mt-2 space-y-2"><Textarea value={editingCommentText} onChange={(e) => setEditingCommentText(e.target.value)} className="min-h-16 text-xs" /><div className="flex justify-end gap-2"><Button type="button" variant="ghost" size="sm" onClick={() => setEditingCommentId(null)}><X className="mr-1 h-3.5 w-3.5" />Cancelar</Button><Button type="button" size="sm" onClick={async () => { if (!editingCommentText.trim() || !props.onUpdateComment) return; await props.onUpdateComment(task.id, c.id, editingCommentText.trim()); setEditingCommentId(null); setEditingCommentText("") }}><Check className="mr-1 h-3.5 w-3.5" />Guardar</Button></div></div> : <div className="mt-1.5 flex items-start justify-between gap-2"><p className="text-xs text-slate-700 dark:text-slate-350 leading-relaxed whitespace-pre-wrap">{c.content}</p>{(c.user.id === currentUser.id || currentUser.role === "ADMIN") && <button type="button" className="shrink-0 text-rose-500" aria-label="Eliminar comentario" onClick={async () => { if (window.confirm("¿Eliminar este comentario?")) await props.onDeleteComment?.(task.id, c.id) }}><Trash2 className="h-3.5 w-3.5" /></button>}</div>}
                       </CardContent>
                     </Card>
                   ))

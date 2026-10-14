@@ -17,7 +17,10 @@ import {
   ChevronRight, 
   Send, 
   AlertCircle,
-  Trash2
+  Trash2,
+  MoreHorizontal,
+  X,
+  Check
 } from "lucide-react"
 
 function getCurrentTimestamp() {
@@ -60,6 +63,8 @@ export default function TaskCard({
   onOpen,
   onQuickStatusChange,
   onAddComment,
+  onUpdateComment,
+  onDeleteComment,
   onTrashTask,
   selectionMode = false,
   selected = false,
@@ -72,6 +77,8 @@ export default function TaskCard({
   onQuickStatusChange: (status: TaskStatus) => Promise<void> | void
   onQuickAssigneeChange?: (assignedToId: string) => Promise<void>
   onAddComment?: (content: string) => Promise<void>
+  onUpdateComment?: (commentId: string, content: string) => Promise<void>
+  onDeleteComment?: (commentId: string) => Promise<void>
   onTrashTask?: () => void
   selectionMode?: boolean
   selected?: boolean
@@ -81,6 +88,8 @@ export default function TaskCard({
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [commentText, setCommentText] = useState("")
   const [commentSending, setCommentSending] = useState(false)
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editingText, setEditingText] = useState("")
 
   const statusOrder: TaskStatus[] = ["PENDING", "IN_PROGRESS", "DONE"]
 
@@ -325,13 +334,9 @@ export default function TaskCard({
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-bold text-[#464747] dark:text-slate-300 text-[10px]">{c.user.name}</span>
-                        <span className="text-[9px] text-slate-400">
-                          {new Date(c.createdAt).toLocaleDateString("es-MX")}
-                        </span>
+                        <div className="flex items-center gap-1"><span className="text-[9px] text-slate-400">{new Date(c.createdAt).toLocaleDateString("es-MX")}</span>{(c.user.id === currentUser.id || currentUser.role === "ADMIN") && <button type="button" onClick={() => { setEditingCommentId(editingCommentId === c.id ? null : c.id); setEditingText(c.content) }} className="rounded p-1 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800" aria-label="Acciones del comentario"><MoreHorizontal className="h-3.5 w-3.5" /></button>}</div>
                       </div>
-                      <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
-                        {c.content}
-                      </p>
+                      {editingCommentId === c.id ? <div className="mt-1 space-y-1"><Input value={editingText} onChange={(e) => setEditingText(e.target.value)} className="h-7 text-[11px]" /><div className="flex justify-end gap-1"><button type="button" onClick={() => setEditingCommentId(null)}><X className="h-3.5 w-3.5" /></button><button type="button" onClick={async () => { if (!editingText.trim()) return; await onUpdateComment?.(c.id, editingText.trim()); setEditingCommentId(null); toast.success("Comentario actualizado") }}><Check className="h-3.5 w-3.5 text-emerald-600" /></button></div></div> : <div className="mt-1 flex items-start justify-between gap-2"><p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">{c.content}</p>{(c.user.id === currentUser.id || currentUser.role === "ADMIN") && <button type="button" onClick={async () => { if (window.confirm("¿Eliminar este comentario?")) { await onDeleteComment?.(c.id); toast.success("Comentario eliminado") } }} className="shrink-0 text-rose-500" aria-label="Eliminar comentario"><Trash2 className="h-3 w-3" /></button>}</div>}
                     </div>
                   ))
                 )}

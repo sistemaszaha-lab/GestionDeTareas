@@ -167,7 +167,7 @@ export default function NotesSection({ initialNotes }: Props) {
 
   return (
     <>
-      <Card className="overflow-hidden snap-start shrink-0 w-[85vw] sm:w-[22rem] md:w-[22rem] md:snap-none rounded-2xl border border-slate-200/60 bg-white dark:border-slate-850 dark:bg-[#1C1D1D] shadow-sm flex flex-col max-h-[85vh]">
+      <Card className="w-full overflow-hidden rounded-2xl border border-slate-200/60 bg-white dark:border-slate-850 dark:bg-[#1C1D1D] shadow-sm flex flex-col max-h-[20rem]">
         <CardHeader className="border-b border-slate-100 dark:border-slate-800/60 p-3.5 sm:px-4 sm:py-3 bg-slate-50/30 dark:bg-[#121313]/10">
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
@@ -190,7 +190,7 @@ export default function NotesSection({ initialNotes }: Props) {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3 sm:space-y-4 p-3.5 sm:p-4 bg-slate-50/10 dark:bg-transparent flex-1 overflow-y-auto">
+        <CardContent className="flex gap-3 overflow-x-auto overflow-y-hidden p-3.5 sm:p-4 bg-slate-50/10 dark:bg-transparent">
           {notes.map((note) => (
             <NoteCard 
               key={note.id} 
